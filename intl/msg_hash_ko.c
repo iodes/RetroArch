@@ -29,7 +29,7 @@
 #pragma execution_character_set("utf-8")
 #endif
 
-int menu_hash_get_help_ko_enum(enum msg_hash_enums msg, char *s, size_t len)
+int menu_hash_get_help_kr_enum(enum msg_hash_enums msg, char *s, size_t len)
 {
    uint32_t      driver_hash = 0;
    settings_t      *settings = config_get_ptr();
@@ -1943,7 +1943,7 @@ int menu_hash_get_help_ko_enum(enum msg_hash_enums msg, char *s, size_t len)
 }
 
 #ifdef HAVE_MENU
-static const char *menu_hash_to_str_ko_label_enum(enum msg_hash_enums msg)
+static const char *menu_hash_to_str_kr_label_enum(enum msg_hash_enums msg)
 {
    if (msg <= MENU_ENUM_LABEL_INPUT_HOTKEY_BIND_END &&
          msg >= MENU_ENUM_LABEL_INPUT_HOTKEY_BIND_BEGIN)
@@ -1968,10 +1968,10 @@ static const char *menu_hash_to_str_ko_label_enum(enum msg_hash_enums msg)
 }
 #endif
 
-const char *msg_hash_to_str_ko(enum msg_hash_enums msg)
+const char *msg_hash_to_str_kr(enum msg_hash_enums msg)
 {
 #ifdef HAVE_MENU
-   const char *ret = menu_hash_to_str_ko_label_enum(msg);
+   const char *ret = menu_hash_to_str_kr_label_enum(msg);
 
    if (ret && !string_is_equal(ret, "null"))
       return ret;
