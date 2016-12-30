@@ -823,7 +823,7 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_POLL_TYPE_BEHAVIOR_NORMAL,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_PREFER_FRONT_TOUCH,
       "Prefer Front Touch")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_REMAPPING_DIRECTORY,
-      "Input Remapping")
+      "입력 재매핑")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_REMAP_BINDS_ENABLE,
       "Remap Binds Enable")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_SAVE_AUTOCONFIG,
@@ -843,7 +843,7 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_USER_BINDS,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INTERNAL_STORAGE_STATUS,
       "Internal storage status")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_JOYPAD_AUTOCONFIG_DIR,
-      "Input Autoconfig")
+      "입력 자동 구성")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_JOYPAD_DRIVER,
       "조이패드 드라이버")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_LAKKA_SERVICES,
@@ -963,7 +963,7 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_CHECK_FRAMES,
       "넷플레이 프레임 확인")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_CLIENT_SWAP_INPUT,
-      "Netplay P2 Uses C1")
+      "넷플레이 P2에서 C1 사용")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_DELAY_FRAMES,
       "넷플레이 프레임 지연")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_DISCONNECT,
@@ -989,13 +989,13 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_SETTINGS,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_STATELESS_MODE,
       "상태 없는 넷플레이 모드")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_SPECTATE_PASSWORD,
-      "Server Spectate-Only Password")
+      "서버 관전 전용 비밀번호")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_SPECTATOR_MODE_ENABLE,
-      "Netplay Spectator Enable")
+      "넷플레이 관전 사용")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_TCP_UDP_PORT,
-      "Netplay TCP Port")
+      "넷플레이 TCP 포트")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETPLAY_NAT_TRAVERSAL,
-      "Netplay NAT Traversal")
+      "넷플레이 NAT 통과")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETWORK_CMD_ENABLE,
       "네트워크 명령")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETWORK_CMD_PORT,
@@ -1065,25 +1065,25 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_OPEN_ARCHIVE,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OPTIONAL,
       "Optional")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY,
-      "Overlay")
+      "오버레이")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_AUTOLOAD_PREFERRED,
       "Autoload Preferred Overlay")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_DIRECTORY,
-      "Overlay")
+      "오버레이")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_OPACITY,
-      "Overlay Opacity")
+      "오버레이 투명도")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_PRESET,
-      "Overlay Preset")
+      "오버레이 프리셋")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_SCALE,
-      "Overlay Scale")
+      "오버레이 배율")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_OVERLAY_SETTINGS,
-      "Onscreen Overlay")
+      "화면 오버레이")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_PAL60_ENABLE,
-      "Use PAL60 Mode")
+      "PAL60 모드 사용")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_PARENT_DIRECTORY,
       "상위 디렉터리")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_PAUSE_LIBRETRO,
-      "Pause when menu activated")
+      "메뉴 활성화시 일시 중지")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_PAUSE_NONACTIVE,
       "백그라운드 실행 중단")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_PERFCNT_ENABLE,
@@ -1223,7 +1223,7 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_RUN,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SAMBA_ENABLE,
       "SAMBA 사용")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SAVEFILE_DIRECTORY,
-      "Savefile")
+      "저장 파일")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SAVESTATE_AUTO_INDEX,
       "Save State Auto Index")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SAVESTATE_AUTO_LOAD,
@@ -1275,9 +1275,9 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_RIBBON,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_RIBBON_SIMPLIFIED,
       "Ribbon (simplified)")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_SIMPLE_SNOW,
-      "단순하게 표시")
+      "Simple Snow")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_SNOW,
-      "표시")
+      "Snow")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SHOW_ADVANCED_SETTINGS,
       "고급 설정 표시")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SHOW_HIDDEN_FILES,
@@ -1587,7 +1587,7 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_VIDEO_SCALE_INTEGER,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_VIDEO_SETTINGS,
       "비디오")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_VIDEO_SHADER_DIR,
-      "Video Shader")
+      "비디오 셰이더")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_VIDEO_SHADER_NUM_PASSES,
       "셰이더 패스")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_VIDEO_SHADER_PARAMETERS,
@@ -1701,13 +1701,13 @@ MSG_HASH(MENU_ENUM_LABEL_VALUE_XMB_THEME,
 MSG_HASH(MENU_ENUM_LABEL_VALUE_YES,
       "예")
 MSG_HASH(MENU_ENUM_LABEL_VIDEO_SHADER_PRESET_TWO,
-      "Shader Preset")
+      "셰이더 프리셋")
 MSG_HASH(MENU_ENUM_SUBLABEL_CHEEVOS_ENABLE,
-      "Enable or disable achievements. For more information, visit http://retroachievements.org")
+      "도전 과제를 활성화 또는 비활성화합니다. 자세한 정보는 http://retroachievements.org을(를) 방문하십시오.")
 MSG_HASH(MENU_ENUM_SUBLABEL_CHEEVOS_TEST_UNOFFICIAL,
-      "Enable or disable unofficial achievements and/or beta features for testing purposes.")
+      "비공식 도전 과제 및 테스트 목적의 베타 기능을 활성화 또는 비활성화합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_CHEEVOS_HARDCORE_MODE_ENABLE,
-      "Enable or disable savestates, cheats, rewind, fast-forward, pause, and slow-motion for all games.")
+      "모든 게임에 대해 상태 저장, 치트, 되감기, 빨리 감기, 일시 중지 및 슬로우 모션을 활성화 또는 비활성화합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_DRIVER_SETTINGS,
       "시스템의 드라이버를 변경합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_RETRO_ACHIEVEMENTS_SETTINGS,
@@ -1783,7 +1783,7 @@ MSG_HASH(MENU_ENUM_SUBLABEL_SUSPEND_SCREENSAVER_ENABLE,
 MSG_HASH(MENU_ENUM_SUBLABEL_VIDEO_WINDOW_SCALE,
       "코어 뷰포트 크기를 기준으로 창 크기를 설정합니다. 다른 방법으로는 아래에서 고정된 창 너비와 높이를 설정할 수 있습니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_USER_LANGUAGE,
-      "Sets the language of the interface.")
+      "인터페이스의 언어를 설정합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_VIDEO_BLACK_FRAME_INSERTION,
       "프레임 사이에 검은색 프레임을 삽입합니다. 60 Hz 영상을 고스팅 없이 재생하려는 120 Hz 모니터 사용자에게 유용합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_VIDEO_FRAME_DELAY,
@@ -2187,7 +2187,7 @@ MSG_HASH(MSG_VIEWPORT_SIZE_CALCULATION_FAILED,
 MSG_HASH(MSG_VIRTUAL_DISK_TRAY,
       "virtual disk tray.")
 MSG_HASH(MENU_ENUM_SUBLABEL_AUDIO_LATENCY,
-      "원하는 오디오 지연 시간을 밀리초 단위로 설정합니다. 오디오 드라이버가 주어진 지연 시간을 사용 할 수 없는 경우 무시될 수 있습니다.")
+      "밀리초 단위의 오디오 지연 시간을 설정합니다. 오디오 드라이버가 주어진 지연 시간을 사용 할 수 없는 경우 무시될 수 있습니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_AUDIO_MUTE,
       "오디오를 음소거/음소거 해제합니다.")
 MSG_HASH(
@@ -2338,13 +2338,13 @@ MSG_HASH(MSG_NETPLAY_LAN_SCAN_COMPLETE,
 MSG_HASH(MSG_NETPLAY_LAN_SCANNING,
       "Scanning for netplay hosts...")
 MSG_HASH(MENU_ENUM_SUBLABEL_PAUSE_NONACTIVE,
-      "Pause gameplay when window focus is lost.")
+      "창 포커스가 해제되면 게임 플레이를 일시 중지합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_VIDEO_DISABLE_COMPOSITION,
-      "Enable or disable composition (Windows only).")
+      "컴포지션을 활성화 또는 비활성화합니다. Windows에만 해당됩니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_HISTORY_LIST_ENABLE,
-      "Enable or disable recent playlist for games, images, music, and videos.")
+      "게임, 사진, 음악 및 비디오의 최근 재생 목록을 활성화 또는 비활성화합니다.")
 MSG_HASH(MENU_ENUM_SUBLABEL_CONTENT_HISTORY_SIZE,
-      "Limit the number of entries in recent playlist for games, images, music, and videos.")
+      "게임, 사진, 음악 및 비디오에 대한 최근 재생 목록의 항목 수를 제한합니다.")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_INPUT_UNIFIED_MENU_CONTROLS,
       "통합 메뉴 제어")
 MSG_HASH(MENU_ENUM_SUBLABEL_INPUT_UNIFIED_MENU_CONTROLS,
@@ -2352,7 +2352,7 @@ MSG_HASH(MENU_ENUM_SUBLABEL_INPUT_UNIFIED_MENU_CONTROLS,
 MSG_HASH(MENU_ENUM_SUBLABEL_VIDEO_FONT_ENABLE,
       "Show onscreen messages.")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_NETWORK_USER_REMOTE_ENABLE,
-      "User %d Remote Enable")
+      "사용자 %d 리모트 활성화")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_BATTERY_LEVEL_ENABLE,
       "Display battery level")
 MSG_HASH(MENU_ENUM_LABEL_VALUE_SELECT_FILE,
