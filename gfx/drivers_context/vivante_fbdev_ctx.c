@@ -28,7 +28,6 @@
 #include "../common/gl_common.h"
 #endif
 
-#include "../../configuration.h"
 #include "../../frontend/frontend_driver.h"
 #include "../../runloop.h"
 
@@ -59,7 +58,7 @@ static void gfx_ctx_vivante_destroy(void *data)
 
 }
 
-static void *gfx_ctx_vivante_init(void *video_driver)
+static void *gfx_ctx_vivante_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_EGL
    EGLint n;
@@ -146,21 +145,21 @@ static bool gfx_ctx_vivante_set_resize(void *data,
    return false;
 }
 
-static void gfx_ctx_vivante_update_window_title(void *data)
+static void gfx_ctx_vivante_update_window_title(void *data, video_frame_info_t video_info)
 {
-   char buf[128]        = {0};
-   char buf_fps[128]    = {0};
-   settings_t *settings = config_get_ptr();
+   char buf[128];
+   char buf_fps[128];
 
-   (void)data;
+   buf[0] = buf_fps[0] = '\0';
 
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
 static bool gfx_ctx_vivante_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -247,7 +246,7 @@ static void gfx_ctx_vivante_set_swap_interval(void *data, unsigned swap_interval
 #endif
 }
 
-static void gfx_ctx_vivante_swap_buffers(void *data)
+static void gfx_ctx_vivante_swap_buffers(void *data, video_frame_info_t video_info)
 {
    vivante_ctx_data_t *viv = (vivante_ctx_data_t*)data;
 

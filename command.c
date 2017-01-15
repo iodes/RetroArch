@@ -1591,29 +1591,35 @@ static bool command_event_save_core_config(void)
  * Saves current configuration file to disk, and (optionally)
  * autosave state.
  **/
-static void command_event_save_current_config(int override_type)
+static void command_event_save_current_config(enum override_type type)
 {
    char msg[128]           = {0};
 
-   if (override_type)
+   switch (type)
    {
-      if (config_save_overrides(override_type))
-      {
-         strlcpy(msg, msg_hash_to_str(MSG_OVERRIDES_SAVED_SUCCESSFULLY), sizeof(msg));
-         RARCH_LOG("[overrides] %s\n", msg);
+      case OVERRIDE_NONE:
+         if (!path_is_empty(RARCH_PATH_CONFIG))
+            command_event_save_config(path_get(RARCH_PATH_CONFIG), msg, sizeof(msg));
+         break;
+      case OVERRIDE_GAME:
+      case OVERRIDE_CORE:
+         if (config_save_overrides(type))
+         {
+            strlcpy(msg, msg_hash_to_str(MSG_OVERRIDES_SAVED_SUCCESSFULLY), sizeof(msg));
+            RARCH_LOG("[overrides] %s\n", msg);
 
-         /* set overrides to active so the original config can be
-            restored after closing content */
-         runloop_ctl(RUNLOOP_CTL_SET_OVERRIDES_ACTIVE, NULL);
-      }
-      else
-      {
-         strlcpy(msg, msg_hash_to_str(MSG_OVERRIDES_ERROR_SAVING), sizeof(msg));
-         RARCH_ERR("[overrides] %s\n", msg);
-      }
+            /* set overrides to active so the original config can be
+               restored after closing content */
+            runloop_ctl(RUNLOOP_CTL_SET_OVERRIDES_ACTIVE, NULL);
+         }
+         else
+         {
+            strlcpy(msg, msg_hash_to_str(MSG_OVERRIDES_ERROR_SAVING), sizeof(msg));
+            RARCH_ERR("[overrides] %s\n", msg);
+         }
+         break;
    }
-   else if (!path_is_empty(RARCH_PATH_CONFIG))
-      command_event_save_config(path_get(RARCH_PATH_CONFIG), msg, sizeof(msg));
+
 
    if (!string_is_empty(msg))
       runloop_msg_queue_push(msg, 1, 180, true);
@@ -1952,7 +1958,7 @@ bool command_event(enum event_command cmd, void *data)
          video_driver_reinit();
          /* Poll input to avoid possibly stale data to corrupt things. */
          input_driver_poll();
-         command_event(CMD_EVENT_GAME_FOCUS_TOGGLE, (void *) -1);
+         command_event(CMD_EVENT_GAME_FOCUS_TOGGLE, (void*)(intptr_t)-1);
 #ifdef HAVE_MENU
          menu_display_set_framebuffer_dirty_flag();
          if (menu_driver_ctl(RARCH_MENU_CTL_IS_ALIVE, NULL))
@@ -1988,15 +1994,19 @@ bool command_event(enum event_command cmd, void *data)
          break;
       case CMD_EVENT_REWIND_INIT:
          {
-#ifdef HAVE_CHEEVOS
             settings_t *settings      = config_get_ptr();
+#ifdef HAVE_CHEEVOS
             if (settings->cheevos.hardcore_mode_enable)
                return false;
 #endif
+
 #ifdef HAVE_NETWORKING
             if (!netplay_driver_ctl(RARCH_NETPLAY_CTL_IS_DATA_INITED, NULL))
 #endif
-               state_manager_event_init();
+            {
+               if (settings->rewind_enable)
+                  state_manager_event_init();
+            }
          }
          break;
       case CMD_EVENT_REWIND_TOGGLE:
@@ -2601,7 +2611,7 @@ bool command_event(enum event_command cmd, void *data)
       case CMD_EVENT_GAME_FOCUS_TOGGLE:
          {
             static bool game_focus_state  = false;
-            long int                 mode = (long int)data;
+            intptr_t                 mode = (intptr_t)data;
             
             /* mode = -1: restores current game focus state
              * mode =  1: force set game focus, instead of toggling

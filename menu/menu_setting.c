@@ -1314,6 +1314,7 @@ static int setting_action_ok_bind_all_save_autoconfig(void *data, bool wraparoun
    unsigned index_offset;
    settings_t    *settings   = config_get_ptr();
    rarch_setting_t *setting  = (rarch_setting_t*)data;
+   const char *name          = NULL;
 
    (void)wraparound;
 
@@ -1321,9 +1322,9 @@ static int setting_action_ok_bind_all_save_autoconfig(void *data, bool wraparoun
       return -1;
 
    index_offset = setting->index_offset;
+   name         = settings->input.device_names[index_offset];
 
-   if(config_save_autoconf_profile(
-            settings->input.device_names[index_offset], index_offset))
+   if(!string_is_empty(name) && config_save_autoconf_profile(name, index_offset))
       runloop_msg_queue_push(
             msg_hash_to_str(MSG_AUTOCONFIG_FILE_SAVED_SUCCESSFULLY), 1, 100, true);
    else
@@ -1560,9 +1561,9 @@ void general_write_handler(void *data)
       case MENU_ENUM_LABEL_VIDEO_THREADED:
          {
             if (*setting->value.target.boolean)
-               task_queue_ctl(TASK_QUEUE_CTL_SET_THREADED, NULL);
+               task_queue_set_threaded();
             else
-               task_queue_ctl(TASK_QUEUE_CTL_UNSET_THREADED, NULL);
+               task_queue_unset_threaded();
          }
          break;
       case MENU_ENUM_LABEL_INPUT_POLL_TYPE_BEHAVIOR:

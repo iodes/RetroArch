@@ -40,9 +40,9 @@
 
 #include "../../defines/psp_defines.h"
 
-#include "../../configuration.h"
-#include "../input_joypad_driver.h"
 #include "../input_config.h"
+#include "../input_driver.h"
+#include "../input_joypad_driver.h"
 
 typedef struct psp_input
 {
@@ -60,11 +60,13 @@ static void psp_input_poll(void *data)
       psp->joypad->poll();
 }
 
-static int16_t psp_input_state(void *data, const struct retro_keybind **binds,
+static int16_t psp_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device,
       unsigned idx, unsigned id)
 {
-   psp_input_t *psp = (psp_input_t*)data;
+   psp_input_t *psp           = (psp_input_t*)data;
 
 #if !defined(SN_TARGET_PSP2) && !defined(VITA)
    if (port > 0)
@@ -74,12 +76,10 @@ static int16_t psp_input_state(void *data, const struct retro_keybind **binds,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return input_joypad_pressed(psp->joypad, port, binds[port], id);
-         break;
+         return input_joypad_pressed(psp->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
-            return input_joypad_analog(psp->joypad, port, idx, id, binds[port]);
+            return input_joypad_analog(psp->joypad, joypad_info, port, idx, id, binds[port]);
          break;
    }
 
@@ -96,15 +96,13 @@ static void psp_input_free_input(void *data)
    free(data);
 }
 
-static void* psp_input_initialize(void)
+static void* psp_input_initialize(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    psp_input_t *psp = (psp_input_t*)calloc(1, sizeof(*psp));
    if (!psp)
       return NULL;
 
-   psp->joypad = input_joypad_init_driver(
-         settings->input.joypad_driver, psp);
+   psp->joypad = input_joypad_init_driver(joypad_driver, psp);
 
    return psp;
 }

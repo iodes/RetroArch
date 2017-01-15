@@ -24,11 +24,12 @@
 
 #include <boolean.h>
 
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 #include "../common/linux_common.h"
+
 #include "../input_keymaps.h"
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
 
 typedef struct linuxraw_input
@@ -38,10 +39,9 @@ typedef struct linuxraw_input
    bool state[0x80];
 } linuxraw_input_t;
 
-static void *linuxraw_input_init(void)
+static void *linuxraw_input_init(const char *joypad_driver)
 {
    linuxraw_input_t *linuxraw  = NULL;
-   settings_t *settings        = config_get_ptr();
 
    /* Only work on terminals. */
    if (!isatty(0))
@@ -64,8 +64,7 @@ static void *linuxraw_input_init(void)
       return NULL;
    }
 
-   linuxraw->joypad = input_joypad_init_driver(
-         settings->input.joypad_driver, linuxraw);
+   linuxraw->joypad = input_joypad_init_driver(joypad_driver, linuxraw);
    input_keymaps_init_keyboard_lut(rarch_key_map_linux);
 
    linux_terminal_claim_stdin();
@@ -113,6 +112,7 @@ static bool linuxraw_input_meta_key_pressed(void *data, int key)
 }
 
 static int16_t linuxraw_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
       const struct retro_keybind **binds, unsigned port,
       unsigned device, unsigned idx, unsigned id)
 {
@@ -122,15 +122,13 @@ static int16_t linuxraw_input_state(void *data,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return linuxraw_is_pressed(linuxraw, binds[port], id) ||
-               input_joypad_pressed(linuxraw->joypad, port, binds[port], id);
-         break;
+         return linuxraw_is_pressed(linuxraw, binds[port], id) ||
+            input_joypad_pressed(linuxraw->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
             ret = linuxraw_analog_pressed(linuxraw, binds[port], idx, id);
          if (!ret && binds[port])
-            ret = input_joypad_analog(linuxraw->joypad, port, idx, id, binds[port]);
+            ret = input_joypad_analog(linuxraw->joypad, joypad_info, port, idx, id, binds[port]);
          return ret;
    }
 

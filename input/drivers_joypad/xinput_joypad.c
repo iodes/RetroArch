@@ -38,7 +38,6 @@
 #include "../../tasks/tasks_internal.h"
 #include "../input_config.h"
 
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 /* Check if the definitions do not already exist.
@@ -171,10 +170,9 @@ const char *xinput_joypad_name(unsigned pad)
 
 static bool xinput_joypad_init(void *data)
 {
-   unsigned i, autoconf_pad;
+   unsigned i, j;
    XINPUT_STATE dummy_state;
    const char *version = "1.4";
-   settings_t *settings = config_get_ptr();
 
    (void)data;
 
@@ -264,21 +262,18 @@ static bool xinput_joypad_init(void *data)
       return false;
    }
 
-   for (autoconf_pad = 0; autoconf_pad < MAX_USERS; autoconf_pad++)
+   for (j = 0; j < MAX_USERS; j++)
    {
-      if (pad_index_to_xuser_index(autoconf_pad) > -1)
+      if (pad_index_to_xuser_index(j) > -1)
       {
-         autoconfig_params_t params;
-
-         /* TODO - implement VID/PID? */
-         params.idx             = autoconf_pad;
-         params.display_name[0] = '\0';
-         params.vid             = 0;
-         params.pid             = 0;
-
-         strlcpy(params.name, xinput_joypad_name(autoconf_pad), sizeof(params.name));
-         strlcpy(params.driver, xinput_joypad.ident, sizeof(params.driver));
-         input_autoconfigure_connect(&params);
+         if (!input_autoconfigure_connect(
+               xinput_joypad_name(j),
+               NULL,
+               xinput_joypad.ident,
+               j,
+               0,
+               0))
+            input_config_set_device_name(j, xinput_joypad_name(j));
       }
    }
 

@@ -22,7 +22,6 @@
 #include <retro_endianness.h>
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 typedef struct
@@ -148,7 +147,10 @@ static void buffer_attr_cb(pa_stream *s, void *data)
 #endif
 }
 
-static void *pulse_init(const char *device, unsigned rate, unsigned latency)
+static void *pulse_init(const char *device, unsigned rate,
+      unsigned latency, 
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    pa_sample_spec               spec;
    pa_buffer_attr        buffer_attr = {0};

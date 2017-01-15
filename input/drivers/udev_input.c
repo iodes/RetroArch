@@ -39,17 +39,17 @@
 #include <compat/strl.h>
 #include <string/stdstring.h>
 
+#include "../input_config.h"
+#include "../input_driver.h"
+#include "../input_joypad_driver.h"
+#include "../input_keymaps.h"
+
 #include "../drivers_keyboard/keyboard_event_udev.h"
 #include "../../gfx/video_driver.h"
 #include "../common/linux_common.h"
 #include "../common/udev_common.h"
 #include "../common/epoll_common.h"
 
-#include "../input_config.h"
-#include "../input_joypad_driver.h"
-#include "../input_keymaps.h"
-
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 typedef struct udev_input udev_input_t;
@@ -492,11 +492,13 @@ static int16_t udev_pointer_state(udev_input_t *udev,
    return 0;
 }
 
-static int16_t udev_input_state(void *data, const struct retro_keybind **binds,
+static int16_t udev_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device, unsigned idx, unsigned id)
 {
    int16_t ret;
-   udev_input_t *udev = (udev_input_t*)data;
+   udev_input_t *udev         = (udev_input_t*)data;
 
    if (!udev)
       return 0;
@@ -504,14 +506,12 @@ static int16_t udev_input_state(void *data, const struct retro_keybind **binds,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return udev_input_is_pressed(binds[port], id) ||
-               input_joypad_pressed(udev->joypad, port, binds[port], id);
-         break;
+         return udev_input_is_pressed(binds[port], id) ||
+            input_joypad_pressed(udev->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          ret = udev_analog_pressed(binds[port], idx, id);
          if (!ret && binds[port])
-            ret = input_joypad_analog(udev->joypad, port, idx, id, binds[port]);
+            ret = input_joypad_analog(udev->joypad, joypad_info, port, idx, id, binds[port]);
          return ret;
 
       case RETRO_DEVICE_KEYBOARD:
@@ -606,9 +606,8 @@ static bool open_devices(udev_input_t *udev, const char *type, device_handle_cb 
    return true;
 }
 
-static void *udev_input_init(void)
+static void *udev_input_init(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    udev_input_t *udev   = (udev_input_t*)calloc(1, sizeof(*udev));
 
    if (!udev)
@@ -662,7 +661,7 @@ static void *udev_input_init(void)
    if (!udev->num_devices)
       RARCH_WARN("[udev]: Couldn't open any keyboard, mouse or touchpad. Are permissions set correctly for /dev/input/event*?\n");
 
-   udev->joypad = input_joypad_init_driver(settings->input.joypad_driver, udev);
+   udev->joypad = input_joypad_init_driver(joypad_driver, udev);
    input_keymaps_init_keyboard_lut(rarch_key_map_linux);
 
    linux_terminal_disable_input();

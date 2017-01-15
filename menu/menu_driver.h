@@ -96,9 +96,6 @@ enum rarch_menu_ctl_state
    RARCH_MENU_CTL_SET_PENDING_SHUTDOWN,
    RARCH_MENU_CTL_DEINIT,
    RARCH_MENU_CTL_INIT,
-   RARCH_MENU_CTL_SHADER_DEINIT,
-   RARCH_MENU_CTL_SHADER_INIT,
-   RARCH_MENU_CTL_SHADER_GET,
    RARCH_MENU_CTL_BLIT_RENDER,
    RARCH_MENU_CTL_RENDER,
    RARCH_MENU_CTL_RENDER_MESSAGEBOX,
@@ -128,7 +125,6 @@ enum rarch_menu_ctl_state
    RARCH_MENU_CTL_TOGGLE,
    RARCH_MENU_CTL_CONTEXT_RESET,
    RARCH_MENU_CTL_CONTEXT_DESTROY,
-   RARCH_MENU_CTL_SHADER_MANAGER_INIT,
    RARCH_MENU_CTL_POPULATE_ENTRIES,
    RARCH_MENU_CTL_FIND_DRIVER,
    RARCH_MENU_CTL_LOAD_IMAGE,
@@ -260,7 +256,7 @@ typedef struct menu_ctx_driver
    void  (*navigation_ascend_alphabet)(void *, size_t *);
    bool  (*lists_init)(void*);
    void  (*list_insert)(void *userdata,
-         file_list_t *list, const char *, const char *, size_t);
+         file_list_t *list, const char *, const char *, const char *, size_t);
    int   (*list_prepend)(void *userdata,
          file_list_t *list, const char *, const char *, size_t);
    void  (*list_free)(file_list_t *list, size_t, size_t);

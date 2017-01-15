@@ -1029,7 +1029,6 @@ static void *vulkan_init(const video_info_t *video,
    unsigned temp_width                = 0;
    unsigned temp_height               = 0;
    const gfx_ctx_driver_t *ctx_driver = NULL;
-   settings_t *settings               = config_get_ptr();
    vk_t *vk                           = (vk_t*)calloc(1, sizeof(*vk));
    if (!vk)
       return NULL;
@@ -1052,7 +1051,7 @@ static void *vulkan_init(const video_info_t *video,
    mode.height = 0;
 
    RARCH_LOG("Detecting screen resolution %ux%u.\n", full_x, full_y);
-   interval = video->vsync ? settings->video.swap_interval : 0;
+   interval = video->vsync ? video->swap_interval : 0;
    video_context_driver_swap_interval(&interval);
 
    win_width  = video->width;
@@ -1113,7 +1112,7 @@ static void *vulkan_init(const video_info_t *video,
    inp.input_data = input_data;
    video_context_driver_input_driver(&inp);
 
-   if (settings->video.font_enable)
+   if (video->font_enable)
       font_driver_init_osd(vk, false, FONT_DRIVER_RENDER_VULKAN_API);
 
    vulkan_init_readback(vk);
@@ -1464,7 +1463,7 @@ static void vulkan_readback(vk_t *vk)
          VK_PIPELINE_STAGE_HOST_BIT);
 }
 
-static void vulkan_inject_black_frame(vk_t *vk)
+static void vulkan_inject_black_frame(vk_t *vk, video_frame_info_t video_info)
 {
    VkCommandBufferBeginInfo begin_info           = {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -1515,19 +1514,18 @@ static void vulkan_inject_black_frame(vk_t *vk)
    slock_unlock(vk->context->queue_lock);
 #endif
 
-   video_context_driver_swap_buffers();
+   video_context_driver_swap_buffers(video_info);
 }
 
 static bool vulkan_frame(void *data, const void *frame,
       unsigned frame_width, unsigned frame_height,
       uint64_t frame_count,
-      unsigned pitch, const char *msg)
+      unsigned pitch, const char *msg, video_frame_info_t video_info)
 {
    struct vk_per_frame *chain;
    unsigned width, height;
    VkClearValue clear_value;
    vk_t *vk                                      = (vk_t*)data;
-   settings_t *settings                          = config_get_ptr();
    static struct retro_perf_counter frame_run    = {0};
    static struct retro_perf_counter begin_cmd    = {0};
    static struct retro_perf_counter build_cmd    = {0};
@@ -1911,11 +1909,11 @@ static bool vulkan_frame(void *data, const void *frame,
    performance_counter_stop(&queue_submit);
 
    performance_counter_start(&swapbuffers);
-   video_context_driver_swap_buffers();
+   video_context_driver_swap_buffers(video_info);
    performance_counter_stop(&swapbuffers);
 
    if (!vk->context->swap_interval_emulation_lock)
-      video_context_driver_update_window_title();
+      video_context_driver_update_window_title(video_info);
 
    /* Handle spurious swapchain invalidations as soon as we can,
     * i.e. right after swap buffers. */
@@ -1933,12 +1931,12 @@ static bool vulkan_frame(void *data, const void *frame,
    /* Disable BFI during fast forward, slow-motion,
     * and pause to prevent flicker. */
    if (
-         settings->video.black_frame_insertion
+         video_info.black_frame_insertion
          && !input_driver_is_nonblock_state()
          && !runloop_ctl(RUNLOOP_CTL_IS_SLOWMOTION, NULL)
          && !runloop_ctl(RUNLOOP_CTL_IS_PAUSED, NULL))
    {
-      vulkan_inject_black_frame(vk);
+      vulkan_inject_black_frame(vk, video_info);
    }
 
    /* Vulkan doesn't directly support swap_interval > 1, so we fake it by duping out more frames. */
@@ -1948,7 +1946,8 @@ static bool vulkan_frame(void *data, const void *frame,
       vk->context->swap_interval_emulation_lock = true;
       for (i = 1; i < vk->context->swap_interval; i++)
       {
-         if (!vulkan_frame(vk, NULL, 0, 0, frame_count, 0, msg))
+         if (!vulkan_frame(vk, NULL, 0, 0, frame_count, 0, msg,
+                  video_info))
          {
             vk->context->swap_interval_emulation_lock = false;
             return false;

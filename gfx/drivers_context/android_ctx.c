@@ -37,6 +37,7 @@
 #endif
 
 #include "../../frontend/drivers/platform_linux.h"
+
 #include "../../configuration.h"
 #include "../../runloop.h"
 
@@ -100,7 +101,7 @@ static void android_gfx_ctx_destroy(void *data)
    free(data);
 }
 
-static void *android_gfx_ctx_init(void *video_driver)
+static void *android_gfx_ctx_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_OPENGLES
    EGLint n, major, minor;
@@ -313,21 +314,21 @@ static bool android_gfx_ctx_set_resize(void *data,
    return false;
 }
 
-static void android_gfx_ctx_update_window_title(void *data)
+static void android_gfx_ctx_update_window_title(void *data, video_frame_info_t video_info)
 {
    char buf[128];
    char buf_fps[128];
-   settings_t *settings = config_get_ptr();
 
    buf[0] = buf_fps[0] = '\0';
 
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
 static bool android_gfx_ctx_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -367,12 +368,11 @@ static bool android_gfx_ctx_set_video_mode(void *data,
 static void android_gfx_ctx_input_driver(void *data,
       const input_driver_t **input, void **input_data)
 {
-   void *androidinput = input_android.init();
+   settings_t *settings = config_get_ptr();
+   void *androidinput   = input_android.init(settings->input.joypad_driver);
 
-   (void)data;
-
-   *input      = androidinput ? &input_android : NULL;
-   *input_data = androidinput;
+   *input               = androidinput ? &input_android : NULL;
+   *input_data          = androidinput;
 }
 
 static bool android_gfx_ctx_bind_api(void *data,
@@ -493,7 +493,7 @@ dpi_fallback:
    return true;
 }
 
-static void android_gfx_ctx_swap_buffers(void *data)
+static void android_gfx_ctx_swap_buffers(void *data, video_frame_info_t video_info)
 {
    android_ctx_data_t *and  = (android_ctx_data_t*)data;
 

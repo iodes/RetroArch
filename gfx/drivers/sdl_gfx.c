@@ -275,7 +275,7 @@ static void *sdl_gfx_init(const video_info_t *video, const input_driver_t **inpu
 
    if (input && input_data)
    {
-      void *sdl_input = input_sdl.init();
+      void *sdl_input = input_sdl.init(settings->input.joypad_driver);
 
       if (sdl_input)
       {
@@ -291,14 +291,15 @@ static void *sdl_gfx_init(const video_info_t *video, const input_driver_t **inpu
 
    sdl_init_font(vid, settings->path.font, settings->video.font_size);
 
-   vid->scaler.scaler_type = video->smooth ? SCALER_TYPE_BILINEAR : SCALER_TYPE_POINT;
-   vid->scaler.in_fmt  = video->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
-   vid->scaler.out_fmt = SCALER_FMT_ARGB8888;
+   vid->scaler.scaler_type      = video->smooth ? SCALER_TYPE_BILINEAR : SCALER_TYPE_POINT;
+   vid->scaler.in_fmt           = video->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
+   vid->scaler.out_fmt          = SCALER_FMT_ARGB8888;
 
-   vid->menu.scaler = vid->scaler;
+   vid->menu.scaler             = vid->scaler;
    vid->menu.scaler.scaler_type = SCALER_TYPE_BILINEAR;
 
-   vid->menu.frame = SDL_ConvertSurface(vid->screen, vid->screen->format, vid->screen->flags | SDL_SRCALPHA);
+   vid->menu.frame              = SDL_ConvertSurface(
+         vid->screen, vid->screen->format, vid->screen->flags | SDL_SRCALPHA);
 
    if (!vid->menu.frame)
    {
@@ -330,7 +331,7 @@ static void sdl_gfx_check_window(sdl_video_t *vid)
 
 static bool sdl_gfx_frame(void *data, const void *frame, unsigned width,
       unsigned height, uint64_t frame_count,
-      unsigned pitch, const char *msg)
+      unsigned pitch, const char *msg, video_frame_info_t video_info)
 {
    char                       buf[128];
    static struct retro_perf_counter sdl_scale = {0};
@@ -369,7 +370,7 @@ static bool sdl_gfx_frame(void *data, const void *frame, unsigned width,
    if (SDL_MUSTLOCK(vid->screen))
       SDL_UnlockSurface(vid->screen);
 
-   if (video_monitor_get_fps(buf, sizeof(buf), NULL, 0))
+   if (video_monitor_get_fps(video_info, buf, sizeof(buf), NULL, 0))
       SDL_WM_SetCaption(buf, NULL);
 
    SDL_Flip(vid->screen);

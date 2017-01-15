@@ -24,7 +24,6 @@
 #include "../../config.h"
 #endif
 
-#include "../../configuration.h"
 #include "../../runloop.h"
 #include "../video_context_driver.h"
 
@@ -34,10 +33,6 @@
 
 #if defined(HAVE_OPENGL) || defined(HAVE_OPENGLES)
 #include "../common/gl_common.h"
-#endif
-
-#ifdef HAVE_CONFIG_H
-#include "../../config.h"
 #endif
 
 typedef struct
@@ -80,7 +75,7 @@ static void gfx_ctx_emscripten_check_window(void *data, bool *quit,
    *quit       = false;
 }
 
-static void gfx_ctx_emscripten_swap_buffers(void *data)
+static void gfx_ctx_emscripten_swap_buffers(void *data, video_frame_info_t video_info)
 {
    (void)data;
    /* no-op in emscripten, no way to force swap/wait for VSync in browsers */
@@ -95,17 +90,16 @@ static bool gfx_ctx_emscripten_set_resize(void *data,
    return false;
 }
 
-static void gfx_ctx_emscripten_update_window_title(void *data)
+static void gfx_ctx_emscripten_update_window_title(void *data, video_frame_info_t video_info)
 {
-   char buf[128]        = {0};
-   char buf_fps[128]    = {0};
-   settings_t *settings = config_get_ptr();
+   char buf[128];
+   char buf_fps[128];
 
-   (void)data;
+   buf[0] = buf_fps[0]  = '\0';
 
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
@@ -127,7 +121,7 @@ static void gfx_ctx_emscripten_destroy(void *data)
    free(data);
 }
 
-static void *gfx_ctx_emscripten_init(void *video_driver)
+static void *gfx_ctx_emscripten_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_EGL
    unsigned width, height;
@@ -195,6 +189,7 @@ error:
 }
 
 static bool gfx_ctx_emscripten_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {

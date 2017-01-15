@@ -101,7 +101,7 @@ static bool gfx_ctx_xegl_set_resize(void *data,
    return false;
 }
 
-static void *gfx_ctx_xegl_init(void *video_driver)
+static void *gfx_ctx_xegl_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_EGL
    static const EGLint egl_attribs_gl[] = {
@@ -258,28 +258,25 @@ static EGLint *xegl_fill_attribs(xegl_ctx_data_t *xegl, EGLint *attr)
 static void gfx_ctx_xegl_set_swap_interval(void *data, unsigned swap_interval);
 
 static bool gfx_ctx_xegl_set_video_mode(void *data,
-   unsigned width, unsigned height,
-   bool fullscreen)
+      video_frame_info_t video_info,
+      unsigned width, unsigned height,
+      bool fullscreen)
 {
    XEvent event;
    EGLint egl_attribs[16];
    EGLint vid, num_visuals;
    EGLint *attr             = NULL;
-   bool windowed_full       = false;
    bool true_full           = false;
    int x_off                = 0;
    int y_off                = 0;
    XVisualInfo temp         = {0};
    XSetWindowAttributes swa = {0};
    XVisualInfo *vi          = NULL;
-   settings_t *settings     = config_get_ptr();
    xegl_ctx_data_t *xegl    = (xegl_ctx_data_t*)data;
 
    int (*old_handler)(Display*, XErrorEvent*) = NULL;
 
    frontend_driver_install_signal_handler();
-
-   windowed_full = settings->video.windowed_fullscreen;
 
    attr = egl_attribs;
    attr = xegl_fill_attribs(xegl, attr);
@@ -302,9 +299,9 @@ static bool gfx_ctx_xegl_set_video_mode(void *data,
       ButtonPressMask | ButtonReleaseMask | KeyReleaseMask;
    swa.override_redirect = fullscreen ? True : False;
 
-   if (fullscreen && !windowed_full)
+   if (fullscreen && !video_info.windowed_fullscreen)
    {
-      if (x11_enter_fullscreen(g_x11_dpy, width, height, &xegl->desktop_mode))
+      if (x11_enter_fullscreen(video_info, g_x11_dpy, width, height, &xegl->desktop_mode))
       {
          xegl->should_reset_mode = true;
          true_full = true;
@@ -313,8 +310,8 @@ static bool gfx_ctx_xegl_set_video_mode(void *data,
          RARCH_ERR("[X/EGL]: Entering true fullscreen failed. Will attempt windowed mode.\n");
    }
 
-   if (settings->video.monitor_index)
-      g_x11_screen = settings->video.monitor_index - 1;
+   if (video_info.monitor_index)
+      g_x11_screen = video_info.monitor_index - 1;
 
 #ifdef HAVE_XINERAMA
    if (fullscreen || g_x11_screen != 0)
@@ -356,7 +353,7 @@ static bool gfx_ctx_xegl_set_video_mode(void *data,
       goto error;
 
    x11_set_window_attr(g_x11_dpy, g_x11_win);
-   x11_update_window_title(NULL);
+   x11_update_window_title(NULL, video_info);
 
    if (fullscreen)
       x11_show_mouse(g_x11_dpy, g_x11_win, false);
@@ -429,7 +426,8 @@ error:
 static void gfx_ctx_xegl_input_driver(void *data,
    const input_driver_t **input, void **input_data)
 {
-   void *xinput = input_x.init();
+   settings_t *settings = config_get_ptr();
+   void *xinput         = input_x.init(settings->input.joypad_driver);
 
    (void)data;
 
@@ -495,7 +493,7 @@ static void gfx_ctx_xegl_show_mouse(void *data, bool state)
    x11_show_mouse(g_x11_dpy, g_x11_win, state);
 }
 
-static void gfx_ctx_xegl_swap_buffers(void *data)
+static void gfx_ctx_xegl_swap_buffers(void *data, video_frame_info_t video_info)
 {
    xegl_ctx_data_t *xegl = (xegl_ctx_data_t*)data;
 

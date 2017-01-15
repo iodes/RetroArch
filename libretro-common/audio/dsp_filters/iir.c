@@ -1,25 +1,31 @@
-/*  RetroArch - A frontend for libretro.
- *  Copyright (C) 2010-2014 - Hans-Kristian Arntzen
- *  Copyright (C) 2014 - Brad Miller
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
- *  RetroArch is free software: you can redistribute it and/or modify it under the terms
- *  of the GNU General Public License as published by the Free Software Found-
- *  ation, either version 3 of the License, or (at your option) any later version.
+ * ---------------------------------------------------------------------------------------
+ * The following license statement only applies to this file (iir.c).
+ * ---------------------------------------------------------------------------------------
  *
- *  RetroArch is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- *  PURPOSE.  See the GNU General Public License for more details.
+ * Permission is hereby granted, free of charge,
+ * to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- *  You should have received a copy of the GNU General Public License along with RetroArch.
- *  If not, see <http://www.gnu.org/licenses/>.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "dspfilter.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <retro_miscellaneous.h>
+#include <libretro_dspfilter.h>
 
 #define sqr(a) ((a) * (a))
 
@@ -60,34 +66,29 @@ static void iir_free(void *data)
 static void iir_process(void *data, struct dspfilter_output *output,
       const struct dspfilter_input *input)
 {
-   float b0, b1, b2, a0, a1, a2;
-   float xn1_l, xn2_l, yn1_l, yn2_l;
-   float xn1_r, xn2_r, yn1_r, yn2_r;
    unsigned i;
-   float *out;
    struct iir_data *iir = (struct iir_data*)data;
+   float *out           = output->samples;
 
-   output->samples = input->samples;
-   output->frames  = input->frames;
+   float b0             = iir->b0;
+   float b1             = iir->b1;
+   float b2             = iir->b2;
+   float a0             = iir->a0;
+   float a1             = iir->a1;
+   float a2             = iir->a2;
 
-   out = output->samples;
+   float xn1_l          = iir->l.xn1;
+   float xn2_l          = iir->l.xn2;
+   float yn1_l          = iir->l.yn1;
+   float yn2_l          = iir->l.yn2;
 
-   b0 = iir->b0;
-   b1 = iir->b1;
-   b2 = iir->b2;
-   a0 = iir->a0;
-   a1 = iir->a1;
-   a2 = iir->a2;
+   float xn1_r          = iir->r.xn1;
+   float xn2_r          = iir->r.xn2;
+   float yn1_r          = iir->r.yn1;
+   float yn2_r          = iir->r.yn2;
 
-   xn1_l = iir->l.xn1;
-   xn2_l = iir->l.xn2;
-   yn1_l = iir->l.yn1;
-   yn2_l = iir->l.yn2;
-
-   xn1_r = iir->r.xn1;
-   xn2_r = iir->r.xn2;
-   yn1_r = iir->r.yn1;
-   yn2_r = iir->r.yn2;
+   output->samples      = input->samples;
+   output->frames       = input->frames;
 
    for (i = 0; i < input->frames; i++, out += 2)
    {
@@ -97,18 +98,18 @@ static void iir_process(void *data, struct dspfilter_output *output,
       float l    = (b0 * in_l + b1 * xn1_l + b2 * xn2_l - a1 * yn1_l - a2 * yn2_l) / a0;
       float r    = (b0 * in_r + b1 * xn1_r + b2 * xn2_r - a1 * yn1_r - a2 * yn2_r) / a0;
 
-      xn2_l = xn1_l;
-      xn1_l = in_l;
-      yn2_l = yn1_l;
-      yn1_l = l;
+      xn2_l      = xn1_l;
+      xn1_l      = in_l;
+      yn2_l      = yn1_l;
+      yn1_l      = l;
 
-      xn2_r = xn1_r;
-      xn1_r = in_r;
-      yn2_r = yn1_r;
-      yn1_r = r;
+      xn2_r      = xn1_r;
+      xn1_r      = in_r;
+      yn2_r      = yn1_r;
+      yn1_r      = r;
 
-      out[0] = l;
-      out[1] = r;
+      out[0]     = l;
+      out[1]     = r;
    }
 
    iir->l.xn1 = xn1_l;
@@ -137,7 +138,8 @@ static enum IIRFilter str_to_type(const char *str)
    CHECK(LSH);
    CHECK(HSH);
    CHECK(RIAA_CD);
-   return LPF; // Fallback.
+
+   return LPF; /* Fallback. */
 }
 
 static void make_poly_from_roots(
@@ -326,9 +328,9 @@ static void *iir_init(const struct dspfilter_info *info,
       const struct dspfilter_config *config, void *userdata)
 {
    float freq, qual, gain;
-   enum IIRFilter filter;
-   char *type = NULL;
-   struct iir_data *iir = (struct iir_data*)calloc(1, sizeof(*iir));
+   enum IIRFilter filter  = LPF;
+   char           *type   = NULL;
+   struct iir_data *iir   = (struct iir_data*)calloc(1, sizeof(*iir));
    if (!iir)
       return NULL;
 

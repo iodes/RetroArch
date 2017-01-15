@@ -42,13 +42,17 @@
 #include "../../config.h"
 #endif
 
-#include "../../configuration.h"
-#include "../../verbosity.h"
-#include "../../tasks/tasks_internal.h"
-#include "../../gfx/video_driver.h"
+#include <string/stdstring.h>
+
 #include "../input_config.h"
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
 #include "../input_keymaps.h"
+
+#include "../../gfx/video_driver.h"
+
+#include "../../verbosity.h"
+#include "../../tasks/tasks_internal.h"
 
 /* Keep track of which pad indexes are 360 controllers.
  * Not static, will be read in xinput_joypad.c
@@ -71,6 +75,7 @@ struct pointer_status
 
 struct dinput_input
 {
+   char *joypad_driver_name;
    bool blocked;
    LPDIRECTINPUTDEVICE8 keyboard;
    LPDIRECTINPUTDEVICE8 mouse;
@@ -125,10 +130,9 @@ error:
    return false;
 }
 
-static void *dinput_init(void)
+static void *dinput_init(const char *joypad_driver)
 {
    struct dinput_input *di = NULL;
-   settings_t *settings = config_get_ptr();
 
    if (!dinput_init_context())
    {
@@ -139,6 +143,9 @@ static void *dinput_init(void)
    di = (struct dinput_input*)calloc(1, sizeof(*di));
    if (!di)
       return NULL;
+
+   if (!string_is_empty(joypad_driver))
+      di->joypad_driver_name = strdup(joypad_driver);
 
 #ifdef __cplusplus
    if (FAILED(IDirectInput8_CreateDevice(g_dinput_ctx, GUID_SysKeyboard, &di->keyboard, NULL)))
@@ -185,7 +192,7 @@ static void *dinput_init(void)
    }
 
    input_keymaps_init_keyboard_lut(rarch_key_map_dinput);
-   di->joypad = input_joypad_init_driver(settings->input.joypad_driver, di);
+   di->joypad = input_joypad_init_driver(joypad_driver, di);
 
    return di;
 }
@@ -276,16 +283,18 @@ static bool dinput_keyboard_pressed(struct dinput_input *di, unsigned key)
 }
 
 static bool dinput_is_pressed(struct dinput_input *di,
+      rarch_joypad_info_t joypad_info,
       const struct retro_keybind *binds,
       unsigned port, unsigned id)
 {
    const struct retro_keybind *bind = &binds[id];
+
    if (id >= RARCH_BIND_LIST_END)
       return false;
 
    if (!di->blocked && dinput_keyboard_pressed(di, bind->key))
       return true;
-   if (binds && binds[id].valid && input_joypad_pressed(di->joypad, port, binds, id))
+   if (binds && binds[id].valid && input_joypad_pressed(di->joypad, joypad_info, port, binds, id))
       return true;
 
    return false;
@@ -459,19 +468,17 @@ static int16_t dinput_pointer_state(struct dinput_input *di,
 }
 
 static int16_t dinput_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
       const struct retro_keybind **binds, unsigned port,
       unsigned device, unsigned idx, unsigned id)
 {
    int16_t ret;
-   struct dinput_input *di = (struct dinput_input*)data;
-   settings_t *settings    = config_get_ptr();
+   struct dinput_input *di    = (struct dinput_input*)data;
 
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port])
-            return dinput_is_pressed(di, binds[port], port, id);
-         break;
+         return dinput_is_pressed(di, joypad_info, binds[port], port, id);
       case RETRO_DEVICE_KEYBOARD:
          return dinput_keyboard_pressed(di, id);
 
@@ -480,8 +487,8 @@ static int16_t dinput_input_state(void *data,
          {
             ret = dinput_pressed_analog(di, binds[port], idx, id);
             if (!ret)
-               ret = input_joypad_analog(di->joypad, port,
-                  idx, id, settings->input.binds[port]);
+               ret = input_joypad_analog(di->joypad, joypad_info,
+                     port, idx, id, binds[port]);
             return ret;
          }
          return 0;
@@ -599,7 +606,6 @@ extern "C"
 bool dinput_handle_message(void *dinput, UINT message, WPARAM wParam, LPARAM lParam)
 {
    struct dinput_input *di = (struct dinput_input *)dinput;
-   settings_t *settings    = config_get_ptr();
    /* WM_POINTERDOWN   : Arrives for each new touch event
     *                    with a new ID - add to list.
     * WM_POINTERUP     : Arrives once the pointer is no
@@ -647,7 +653,7 @@ bool dinput_handle_message(void *dinput, UINT message, WPARAM wParam, LPARAM lPa
       case WM_DEVICECHANGE:
             if (di->joypad)
                di->joypad->destroy();
-            di->joypad = input_joypad_init_driver(settings->input.joypad_driver, di);
+            di->joypad = input_joypad_init_driver(di->joypad_driver_name, di);
          break;
       case WM_MOUSEWHEEL:
             if (((short) HIWORD(wParam))/120 > 0)
@@ -689,6 +695,9 @@ static void dinput_free(void *data)
 
       if (di->mouse)
          IDirectInputDevice8_Release(di->mouse);
+
+      if (string_is_empty(di->joypad_driver_name))
+         free(di->joypad_driver_name);
 
       free(di);
    }

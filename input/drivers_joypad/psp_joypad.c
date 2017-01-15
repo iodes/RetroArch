@@ -72,18 +72,15 @@ static const char *psp_joypad_name(unsigned pad)
 
 static void psp_joypad_autodetect_add(unsigned autoconf_pad)
 {
-   autoconfig_params_t params;
-
-   /* TODO - implement VID/PID? */
-   params.idx             = autoconf_pad;
-   params.display_name[0] = '\0';
-   params.vid             = 0;
-   params.pid             = 0;
-
-   strlcpy(params.name, psp_joypad_name(autoconf_pad), sizeof(params.name));
-   strlcpy(params.driver, psp_joypad.ident, sizeof(params.driver));
-
-   input_autoconfigure_connect(&params);
+   if (!input_autoconfigure_connect(
+         psp_joypad_name(autoconf_pad),
+         NULL,
+         psp_joypad.ident,
+         autoconf_pad,
+         0,
+         0
+         ))
+      input_config_set_device_name(autoconf_pad, psp_joypad_name(autoconf_pad));
 }
 
 static bool psp_joypad_init(void *data)
@@ -172,7 +169,9 @@ static void psp_joypad_poll(void)
 {
    unsigned player;
    unsigned players_count = PSP_MAX_PADS;
+#if defined(VITA)
    settings_t *settings = config_get_ptr();
+#endif
 
 #ifdef PSP
    sceCtrlSetSamplingCycle(0);
@@ -237,10 +236,14 @@ static void psp_joypad_poll(void)
 #if defined(VITA)
       if (psp2_model == SCE_KERNEL_MODEL_VITA 
          && !menu_driver_ctl(RARCH_MENU_CTL_IS_ALIVE, NULL)
-         && settings->input.backtouch_enable) {
+         && settings->input.backtouch_enable)
+      {
+         unsigned i;
          SceTouchData touch_surface = {0};
          sceTouchPeek(settings->input.backtouch_toggle ? SCE_TOUCH_PORT_FRONT : SCE_TOUCH_PORT_BACK, &touch_surface, 1);
-         for (int i = 0; i < touch_surface.reportNum; i++) {
+
+         for (i = 0; i < touch_surface.reportNum; i++)
+         {
             int x = LERP(touch_surface.report[i].x, TOUCH_MAX_WIDTH, SCREEN_WIDTH);
             int y = LERP(touch_surface.report[i].y, TOUCH_MAX_HEIGHT, SCREEN_HEIGHT);
             if (NW_AREA(x, y)) state_tmp.buttons |= PSP_CTRL_L2;

@@ -1,24 +1,31 @@
-/*  RetroArch - A frontend for libretro.
- *  Copyright (C) 2010-2014 - Hans-Kristian Arntzen
+/* Copyright  (C) 2010-2016 The RetroArch team
  *
- *  RetroArch is free software: you can redistribute it and/or modify it under the terms
- *  of the GNU General Public License as published by the Free Software Found-
- *  ation, either version 3 of the License, or (at your option) any later version.
+ * ---------------------------------------------------------------------------------------
+ * The following license statement only applies to this file (chorus.c).
+ * ---------------------------------------------------------------------------------------
  *
- *  RetroArch is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- *  PURPOSE.  See the GNU General Public License for more details.
+ * Permission is hereby granted, free of charge,
+ * to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- *  You should have received a copy of the GNU General Public License along with RetroArch.
- *  If not, see <http://www.gnu.org/licenses/>.
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "dspfilter.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <retro_miscellaneous.h>
+#include <libretro_dspfilter.h>
 
 #define CHORUS_MAX_DELAY 4096
 #define CHORUS_DELAY_MASK (CHORUS_MAX_DELAY - 1)
@@ -39,18 +46,20 @@ struct chorus_data
 
 static void chorus_free(void *data)
 {
-   free(data);
+   if (data)
+      free(data);
 }
 
 static void chorus_process(void *data, struct dspfilter_output *output,
       const struct dspfilter_input *input)
 {
    unsigned i;
+   float *out             = NULL;
    struct chorus_data *ch = (struct chorus_data*)data;
 
-   output->samples = input->samples;
-   output->frames  = input->frames;
-   float *out = output->samples;
+   output->samples        = input->samples;
+   output->frames         = input->frames;
+   out                    = output->samples;
 
    for (i = 0; i < input->frames; i++, out += 2)
    {
@@ -65,24 +74,27 @@ static void chorus_process(void *data, struct dspfilter_output *output,
          ch->lfo_ptr = 0;
 
       delay_int = (unsigned)delay;
+
       if (delay_int >= CHORUS_MAX_DELAY - 1)
          delay_int = CHORUS_MAX_DELAY - 2;
+
       delay_frac = delay - delay_int;
 
       ch->old[0][ch->old_ptr] = in[0];
       ch->old[1][ch->old_ptr] = in[1];
 
-      l_a = ch->old[0][(ch->old_ptr - delay_int - 0) & CHORUS_DELAY_MASK];
-      l_b = ch->old[0][(ch->old_ptr - delay_int - 1) & CHORUS_DELAY_MASK];
-      r_a = ch->old[1][(ch->old_ptr - delay_int - 0) & CHORUS_DELAY_MASK];
-      r_b = ch->old[1][(ch->old_ptr - delay_int - 1) & CHORUS_DELAY_MASK];
+      l_a         = ch->old[0][(ch->old_ptr - delay_int - 0) & CHORUS_DELAY_MASK];
+      l_b         = ch->old[0][(ch->old_ptr - delay_int - 1) & CHORUS_DELAY_MASK];
+      r_a         = ch->old[1][(ch->old_ptr - delay_int - 0) & CHORUS_DELAY_MASK];
+      r_b         = ch->old[1][(ch->old_ptr - delay_int - 1) & CHORUS_DELAY_MASK];
 
-      /* Lerp introduces aliasing of the chorus component, but doing full polyphase here is probably overkill. */
-      chorus_l = l_a * (1.0f - delay_frac) + l_b * delay_frac;
-      chorus_r = r_a * (1.0f - delay_frac) + r_b * delay_frac;
+      /* Lerp introduces aliasing of the chorus component, 
+       * but doing full polyphase here is probably overkill. */
+      chorus_l    = l_a * (1.0f - delay_frac) + l_b * delay_frac;
+      chorus_r    = r_a * (1.0f - delay_frac) + r_b * delay_frac;
 
-      out[0] = ch->mix_dry * in[0] + ch->mix_wet * chorus_l;
-      out[1] = ch->mix_dry * in[1] + ch->mix_wet * chorus_r;
+      out[0]      = ch->mix_dry * in[0] + ch->mix_wet * chorus_l;
+      out[1]      = ch->mix_dry * in[1] + ch->mix_wet * chorus_r;
 
       ch->old_ptr = (ch->old_ptr + 1) & CHORUS_DELAY_MASK;
    }
@@ -138,7 +150,8 @@ static const struct dspfilter_implementation chorus_plug = {
 #define dspfilter_get_implementation chorus_dspfilter_get_implementation
 #endif
 
-const struct dspfilter_implementation *dspfilter_get_implementation(dspfilter_simd_mask_t mask)
+const struct dspfilter_implementation *
+dspfilter_get_implementation(dspfilter_simd_mask_t mask)
 {
    (void)mask;
    return &chorus_plug;

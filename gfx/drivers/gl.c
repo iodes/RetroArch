@@ -292,8 +292,21 @@ static void gl_set_projection(gl_t *gl,
    matrix_4x4_multiply(&gl->mvp, &rot, &gl->mvp_no_rot);
 }
 
-void gl_set_viewport(void *data, unsigned viewport_width,
+static void gl_set_viewport_wrapper(void *data, unsigned viewport_width,
       unsigned viewport_height, bool force_full, bool allow_rotate)
+{
+   video_frame_info_t video_info;
+
+   video_driver_build_info(&video_info);
+
+   gl_set_viewport(data, video_info,
+         viewport_width, viewport_height, force_full, allow_rotate);
+}
+
+void gl_set_viewport(void *data, video_frame_info_t video_info,
+      unsigned viewport_width,
+      unsigned viewport_height,
+      bool force_full, bool allow_rotate)
 {
    gfx_ctx_aspect_t aspect_data;
    unsigned width, height;
@@ -301,7 +314,6 @@ void gl_set_viewport(void *data, unsigned viewport_width,
    int y                  = 0;
    float device_aspect    = (float)viewport_width / viewport_height;
    struct video_ortho ortho = {0, 1, 0, 1, -1, 1};
-   settings_t *settings   = config_get_ptr();
    gl_t           *gl     = (gl_t*)data;
 
    video_driver_get_size(&width, &height);
@@ -312,7 +324,7 @@ void gl_set_viewport(void *data, unsigned viewport_width,
 
    video_context_driver_translate_aspect(&aspect_data);
 
-   if (settings->video.scale_integer && !force_full)
+   if (video_info.scale_integer && !force_full)
    {
       video_viewport_get_scaled_integer(&gl->vp,
             viewport_width, viewport_height,
@@ -325,7 +337,7 @@ void gl_set_viewport(void *data, unsigned viewport_width,
       float desired_aspect = video_driver_get_aspect_ratio();
 
 #if defined(HAVE_MENU)
-      if (settings->video.aspect_ratio_idx == ASPECT_RATIO_CUSTOM)
+      if (video_info.aspect_ratio_idx == ASPECT_RATIO_CUSTOM)
       {
          const struct video_viewport *custom = video_viewport_get_custom();
 
@@ -642,7 +654,7 @@ static void gl_init_textures(gl_t *gl, const video_info_t *video)
    texture_fmt  = gl->texture_fmt;
 #endif
 
-#ifdef HAVE_OPENGLES2
+#if defined(HAVE_OPENGLES) && !defined(HAVE_PSGL)
    /* GLES is picky about which format we use here.
     * Without extensions, we can *only* render to 16-bit FBOs. */
 
@@ -826,7 +838,7 @@ static INLINE void gl_set_shader_viewport(gl_t *gl, unsigned idx)
    shader_info.set_active = true;
 
    video_shader_driver_use(shader_info);
-   gl_set_viewport(gl, width, height, false, true);
+   gl_set_viewport_wrapper(gl, width, height, false, true);
 }
 
 void gl_load_texture_data(
@@ -1077,7 +1089,8 @@ static INLINE void gl_draw_texture(gl_t *gl)
 static bool gl_frame(void *data, const void *frame,
       unsigned frame_width, unsigned frame_height,
       uint64_t frame_count,
-      unsigned pitch, const char *msg)
+      unsigned pitch, const char *msg,
+      video_frame_info_t video_info)
 {
    video_shader_ctx_mvp_t mvp;
    video_shader_ctx_coords_t coords;
@@ -1087,7 +1100,6 @@ static bool gl_frame(void *data, const void *frame,
    video_shader_ctx_info_t shader_info;
    static struct retro_perf_counter frame_run = {0};
    gl_t                            *gl = (gl_t*)data;
-   settings_t                *settings = config_get_ptr();
 
    performance_counter_init(&frame_run, "frame_run");
    performance_counter_start(&frame_run);
@@ -1112,7 +1124,7 @@ static bool gl_frame(void *data, const void *frame,
 
 #ifdef IOS
    /* Apparently the viewport is lost each frame, thanks Apple. */
-   gl_set_viewport(gl, width, height, false, true);
+   gl_set_viewport(gl, video_info, width, height, false, true);
 #endif
 
 #ifdef HAVE_FBO
@@ -1121,7 +1133,7 @@ static bool gl_frame(void *data, const void *frame,
    {
       gl_renderchain_recompute_pass_sizes(gl, frame_width, frame_height,
             gl->vp_out_width, gl->vp_out_height);
-      gl_renderchain_start_render(gl);
+      gl_renderchain_start_render(gl, video_info);
    }
 #endif
 
@@ -1143,11 +1155,11 @@ static bool gl_frame(void *data, const void *frame,
 
          /* Go back to what we're supposed to do,
           * render to FBO #0. */
-         gl_renderchain_start_render(gl);
+         gl_renderchain_start_render(gl, video_info);
       }
       else
 #endif
-         gl_set_viewport(gl, width, height, false, true);
+         gl_set_viewport(gl, video_info, width, height, false, true);
    }
 
    if (frame)
@@ -1181,7 +1193,7 @@ static bool gl_frame(void *data, const void *frame,
       if (!gl->fbo_inited)
       {
          gl_bind_backbuffer();
-         gl_set_viewport(gl, width, height, false, true);
+         gl_set_viewport(gl, video_info, width, height, false, true);
       }
 
 #ifndef HAVE_OPENGLES
@@ -1257,7 +1269,8 @@ static bool gl_frame(void *data, const void *frame,
 
 #ifdef HAVE_FBO
    if (gl->fbo_inited)
-      gl_renderchain_render(gl, frame_count, &gl->tex_info, &feedback_info);
+      gl_renderchain_render(gl, video_info,
+            frame_count, &gl->tex_info, &feedback_info);
 #endif
 
    /* Set prev textures. */
@@ -1280,7 +1293,7 @@ static bool gl_frame(void *data, const void *frame,
    gl_render_overlay(gl);
 #endif
 
-   video_context_driver_update_window_title();
+   video_context_driver_update_window_title(video_info);
 
    performance_counter_stop(&frame_run);
 
@@ -1326,19 +1339,19 @@ static bool gl_frame(void *data, const void *frame,
    /* Disable BFI during fast forward, slow-motion,
     * and pause to prevent flicker. */
    if (
-         settings->video.black_frame_insertion
+         video_info.black_frame_insertion
          && !input_driver_is_nonblock_state()
          && !runloop_ctl(RUNLOOP_CTL_IS_SLOWMOTION, NULL)
          && !runloop_ctl(RUNLOOP_CTL_IS_PAUSED, NULL))
    {
-      video_context_driver_swap_buffers();
+      video_context_driver_swap_buffers(video_info);
       glClear(GL_COLOR_BUFFER_BIT);
    }
 
-   video_context_driver_swap_buffers();
+   video_context_driver_swap_buffers(video_info);
 
 #ifdef HAVE_GL_SYNC
-   if (settings->video.hard_sync && gl->have_sync)
+   if (video_info.hard_sync && gl->have_sync)
    {
       static struct retro_perf_counter gl_fence = {0};
 
@@ -1348,7 +1361,7 @@ static bool gl_frame(void *data, const void *frame,
       gl->fences[gl->fence_count++] =
          glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 
-      while (gl->fence_count > settings->video.hard_sync_frames)
+      while (gl->fence_count > video_info.hard_sync_frames)
       {
          glClientWaitSync(gl->fences[0],
                GL_SYNC_FLUSH_COMMANDS_BIT, 1000000000);
@@ -1853,7 +1866,6 @@ static void *gl_init(const video_info_t *video, const input_driver_t **input, vo
    const char *version                  = NULL;
    struct retro_hw_render_callback *hwr = NULL;
    char *error_string                   = NULL;
-   settings_t *settings                 = config_get_ptr();
    gl_t *gl                             = (gl_t*)calloc(1, sizeof(gl_t));
    const gfx_ctx_driver_t *ctx_driver   = gl_get_context(gl);
    if (!gl || !ctx_driver)
@@ -1874,7 +1886,7 @@ static void *gl_init(const video_info_t *video, const input_driver_t **input, vo
 
    RARCH_LOG("Detecting screen resolution %ux%u.\n", full_x, full_y);
 
-   interval = video->vsync ? settings->video.swap_interval : 0;
+   interval = video->vsync ? video->swap_interval : 0;
 
    video_context_driver_swap_interval(&interval);
 
@@ -2090,7 +2102,7 @@ static void *gl_init(const video_info_t *video, const input_driver_t **input, vo
 
    video_context_driver_input_driver(&inp);
 
-   if (settings->video.font_enable)
+   if (video->font_enable)
       font_driver_init_osd(gl, false, FONT_DRIVER_RENDER_OPENGL_API);
 
 #ifdef HAVE_GL_ASYNC_READBACK
@@ -2855,7 +2867,7 @@ video_driver_t video_gl = {
    gl_free,
    "gl",
 
-   gl_set_viewport,
+   gl_set_viewport_wrapper,
    gl_set_rotation,
 
    gl_viewport_info,

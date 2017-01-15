@@ -26,7 +26,6 @@
 #include "font_driver.h"
 #include "video_shader_driver.h"
 
-#include "../configuration.h"
 #include "../performance_counters.h"
 #include "../runloop.h"
 #include "../verbosity.h"
@@ -239,7 +238,7 @@ static void video_thread_reply(thread_video_t *thr, const thread_packet_t *pkt)
 {
    slock_lock(thr->lock);
 
-   thr->cmd_data = *pkt;
+   thr->cmd_data  = *pkt;
 
    thr->reply_cmd = pkt->type;
    thr->send_cmd  = CMD_VIDEO_NONE;
@@ -254,7 +253,7 @@ static void video_thread_send_packet(thread_video_t *thr,
 {
    slock_lock(thr->lock);
 
-   thr->cmd_data = *pkt;
+   thr->cmd_data  = *pkt;
 
    thr->send_cmd  = pkt->type;
    thr->reply_cmd = CMD_VIDEO_NONE;
@@ -272,7 +271,7 @@ static void video_thread_wait_reply(thread_video_t *thr, thread_packet_t *pkt)
    while (pkt->type != thr->reply_cmd)
       scond_wait(thr->cond_cmd, thr->lock);
 
-   *pkt = thr->cmd_data;
+   *pkt               = thr->cmd_data;
    thr->cmd_data.type = CMD_VIDEO_NONE;
 
    slock_unlock(thr->lock);
@@ -612,10 +611,16 @@ static void video_thread_loop(void *data)
          thread_update_driver_state(thr);
 
          if (thr->driver && thr->driver->frame)
+         {
+            video_frame_info_t video_info;
+            video_driver_build_info(&video_info);
+
             ret = thr->driver->frame(thr->driver_data,
-               thr->frame.buffer, thr->frame.width, thr->frame.height,
-               thr->frame.count,
-               thr->frame.pitch, *thr->frame.msg ? thr->frame.msg : NULL);
+                  thr->frame.buffer, thr->frame.width, thr->frame.height,
+                  thr->frame.count,
+                  thr->frame.pitch, *thr->frame.msg ? thr->frame.msg : NULL,
+                  video_info);
+         }
 
          slock_unlock(thr->frame.lock);
 
@@ -701,7 +706,7 @@ static bool video_thread_has_windowed(void *data)
 
 static bool video_thread_frame(void *data, const void *frame_,
       unsigned width, unsigned height, uint64_t frame_count,
-      unsigned pitch, const char *msg)
+      unsigned pitch, const char *msg, video_frame_info_t video_info)
 {
    unsigned copy_stride;
    static struct retro_perf_counter thr_frame = {0};
@@ -717,7 +722,7 @@ static bool video_thread_frame(void *data, const void *frame_,
 
       if (thr->driver && thr->driver->frame)
          return thr->driver->frame(thr->driver_data, frame_,
-               width, height, frame_count, pitch, msg);
+               width, height, frame_count, pitch, msg, video_info);
       return false;
    }
 
@@ -734,10 +739,9 @@ static bool video_thread_frame(void *data, const void *frame_,
 
    if (!thr->nonblock)
    {
-      settings_t *settings = config_get_ptr();
 
       retro_time_t target_frame_time = (retro_time_t)
-         roundf(1000000 / settings->video.refresh_rate);
+         roundf(1000000 / video_info.refresh_rate);
       retro_time_t target = thr->last_time + target_frame_time;
 
       /* Ideally, use absolute time, but that is only a good idea on POSIX. */

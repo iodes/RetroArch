@@ -21,17 +21,17 @@
 #include <string/stdstring.h>
 #include <libretro.h>
 
-#include "../../configuration.h"
-
 #include "SDL.h"
-#include "../../gfx/video_context_driver.h"
-#include "../../configuration.h"
-#include "../../verbosity.h"
-#include "../../tasks/tasks_internal.h"
+
 #include "../input_config.h"
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
 #include "../input_keymaps.h"
 #include "../input_keyboard.h"
+
+#include "../../gfx/video_context_driver.h"
+#include "../../verbosity.h"
+#include "../../tasks/tasks_internal.h"
 
 typedef struct sdl_input
 {
@@ -43,16 +43,15 @@ typedef struct sdl_input
    int mouse_l, mouse_r, mouse_m, mouse_wu, mouse_wd, mouse_wl, mouse_wr;
 } sdl_input_t;
 
-static void *sdl_input_init(void)
+static void *sdl_input_init(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    sdl_input_t     *sdl = (sdl_input_t*)calloc(1, sizeof(*sdl));
    if (!sdl)
       return NULL;
 
    input_keymaps_init_keyboard_lut(rarch_key_map_sdl);
 
-   sdl->joypad = input_joypad_init_driver(settings->input.joypad_driver, sdl);
+   sdl->joypad = input_joypad_init_driver(joypad_driver, sdl);
 
    RARCH_LOG("[SDL]: Input driver initialized.\n");
    return sdl;
@@ -110,19 +109,22 @@ static bool sdl_input_meta_key_pressed(void *data, int key)
    return false;
 }
 
-static int16_t sdl_joypad_device_state(sdl_input_t *sdl, const struct retro_keybind **binds_, 
-      unsigned port_num, unsigned id, enum input_device_type *device)
+static int16_t sdl_joypad_device_state(sdl_input_t *sdl,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds_, 
+      unsigned port, unsigned id, enum input_device_type *device)
 {
    if (id < RARCH_BIND_LIST_END)
    {
-      const struct retro_keybind *binds = binds_[port_num];
-      if (binds && binds[id].valid && sdl_is_pressed(sdl, port_num, binds, id))
+      const struct retro_keybind *binds = binds_[port];
+
+      if (sdl_is_pressed(sdl, port, binds, id))
       {
          *device = INPUT_DEVICE_TYPE_KEYBOARD;
          return 1;
       }
 
-      if (binds && binds[id].valid && input_joypad_pressed(sdl->joypad, 0, binds, id))
+      if (input_joypad_pressed(sdl->joypad, joypad_info, 0, binds, id))
       {
          *device = INPUT_DEVICE_TYPE_JOYPAD;
          return 1;
@@ -131,12 +133,15 @@ static int16_t sdl_joypad_device_state(sdl_input_t *sdl, const struct retro_keyb
    return 0;
 }
 
-static int16_t sdl_analog_device_state(sdl_input_t *sdl, const struct retro_keybind **binds,
+static int16_t sdl_analog_device_state(sdl_input_t *sdl,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port_num, unsigned idx, unsigned id)
 {
-   int16_t ret = binds[port_num] ? sdl_analog_pressed(sdl, binds[port_num], idx, id) : 0;
+   int16_t ret                = binds[port_num] ? sdl_analog_pressed(sdl, binds[port_num], idx, id) : 0;
+
    if (!ret && binds[port_num])
-      ret = input_joypad_analog(sdl->joypad, port_num, idx, id, binds[port_num]);
+      ret = input_joypad_analog(sdl->joypad, joypad_info, port_num, idx, id, binds[port_num]);
    return ret;
 }
 
@@ -226,7 +231,9 @@ static int16_t sdl_lightgun_device_state(sdl_input_t *sdl, unsigned id)
    return 0;
 }
 
-static int16_t sdl_input_state(void *data_, const struct retro_keybind **binds,
+static int16_t sdl_input_state(void *data_,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device, unsigned idx, unsigned id)
 {
    enum input_device_type type = INPUT_DEVICE_TYPE_NONE;
@@ -235,9 +242,9 @@ static int16_t sdl_input_state(void *data_, const struct retro_keybind **binds,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         return sdl_joypad_device_state(data, binds, port, id, &type);
+         return sdl_joypad_device_state(data, joypad_info, binds, port, id, &type);
       case RETRO_DEVICE_ANALOG:
-         return sdl_analog_device_state(data, binds, port, idx, id);
+         return sdl_analog_device_state(data, joypad_info, binds, port, idx, id);
       case RETRO_DEVICE_MOUSE:
          return sdl_mouse_device_state(data, id);
       case RETRO_DEVICE_POINTER:

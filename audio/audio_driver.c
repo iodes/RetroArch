@@ -22,15 +22,18 @@
 #include <audio/conversion/float_to_s16.h>
 #include <audio/conversion/s16_to_float.h>
 #include <audio/audio_resampler.h>
+#include <audio/dsp_filter.h>
+#include <file/file_path.h>
+#include <lists/dir_list.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
 #endif
 
 #include "audio_driver.h"
-#include "audio_dsp_filter.h"
 #include "audio_thread_wrapper.h"
 #include "../record/record_driver.h"
+#include "../frontend/frontend_driver.h"
 
 #include "../command.h"
 #include "../driver.h"
@@ -136,9 +139,9 @@ static double audio_source_ratio_original                = 0.0f;
 static double audio_source_ratio_current                 = 0.0f;
 static struct retro_audio_callback audio_callback        = {0};
 
-static rarch_dsp_filter_t *audio_driver_dsp              = NULL;
+static retro_dsp_filter_t *audio_driver_dsp              = NULL;
 static struct string_list *audio_driver_devices_list     = NULL;
-static const rarch_resampler_t *audio_driver_resampler   = NULL;
+static const retro_resampler_t *audio_driver_resampler   = NULL;
 static void *audio_driver_resampler_data                 = NULL;
 static const audio_driver_t *current_audio               = NULL;
 static void *audio_driver_context_audio_data             = NULL;
@@ -292,7 +295,7 @@ static bool uninit_audio(void)
 static bool audio_driver_init_resampler(void)
 {
    settings_t *settings = config_get_ptr();
-   return rarch_resampler_realloc(
+   return retro_resampler_realloc(
          &audio_driver_resampler_data,
          &audio_driver_resampler,
          settings->audio.resampler,
@@ -301,6 +304,7 @@ static bool audio_driver_init_resampler(void)
 
 static bool audio_driver_init_internal(bool audio_cb_inited)
 {
+   unsigned new_rate     = 0;
    float   *aud_inp_data = NULL;
    float *samples_buf    = NULL;
    int16_t *conv_buf     = NULL;
@@ -355,7 +359,9 @@ static bool audio_driver_init_internal(bool audio_cb_inited)
                &current_audio,
                &audio_driver_context_audio_data,
                *settings->audio.device ? settings->audio.device : NULL,
-               settings->audio.out_rate, settings->audio.latency,
+               settings->audio.out_rate, &new_rate, 
+               settings->audio.latency,
+               settings->audio.block_frames,
                current_audio))
       {
          RARCH_ERR("Cannot open threaded audio driver ... Exiting ...\n");
@@ -368,8 +374,13 @@ static bool audio_driver_init_internal(bool audio_cb_inited)
       audio_driver_context_audio_data = 
          current_audio->init(*settings->audio.device ?
                settings->audio.device : NULL,
-               settings->audio.out_rate, settings->audio.latency);
+               settings->audio.out_rate, settings->audio.latency,
+               settings->audio.block_frames,
+               &new_rate);
    }
+
+   if (new_rate != 0)
+      settings->audio.out_rate = new_rate;
 
    if (!audio_driver_context_audio_data)
    {
@@ -532,7 +543,7 @@ static bool audio_driver_flush(const int16_t *data, size_t samples)
    if (audio_driver_dsp)
    {
       static struct retro_perf_counter audio_dsp           = {0};
-      struct rarch_dsp_data dsp_data;
+      struct retro_dsp_data dsp_data;
 
       dsp_data.input                 = NULL;
       dsp_data.input_frames          = 0;
@@ -544,7 +555,7 @@ static bool audio_driver_flush(const int16_t *data, size_t samples)
 
       performance_counter_init(&audio_dsp, "audio_dsp");
       performance_counter_start(&audio_dsp);
-      rarch_dsp_filter_process(audio_driver_dsp, &dsp_data);
+      retro_dsp_filter_process(audio_driver_dsp, &dsp_data);
       performance_counter_stop(&audio_dsp);
 
       if (dsp_data.output)
@@ -710,15 +721,35 @@ void audio_driver_set_volume_gain(float gain)
 void audio_driver_dsp_filter_free(void)
 {
    if (audio_driver_dsp)
-      rarch_dsp_filter_free(audio_driver_dsp);
+      retro_dsp_filter_free(audio_driver_dsp);
    audio_driver_dsp = NULL;
 }
 
 void audio_driver_dsp_filter_init(const char *device)
 {
-   audio_driver_dsp = rarch_dsp_filter_new(
-         device, audio_driver_input);
+#if defined(HAVE_DYLIB) && !defined(HAVE_FILTERS_BUILTIN)
+   char basedir[PATH_MAX_LENGTH];
+   char ext_name[PATH_MAX_LENGTH];
+#endif
+   struct string_list *plugs     = NULL;
+#if defined(HAVE_DYLIB) && !defined(HAVE_FILTERS_BUILTIN)
+   fill_pathname_basedir(basedir, device, sizeof(basedir));
 
+   if (!frontend_driver_get_core_extension(ext_name, sizeof(ext_name)))
+      goto error;
+
+   plugs = dir_list_new(basedir, ext_name, false, true, false, false);
+   if (!plugs)
+      goto error;
+#endif
+   audio_driver_dsp = retro_dsp_filter_new(
+         device, plugs, audio_driver_input);
+   if (!audio_driver_dsp)
+      goto error;
+
+   return;
+
+error:
    if (!audio_driver_dsp)
       RARCH_ERR("[DSP]: Failed to initialize DSP filter \"%s\".\n", device);
 }

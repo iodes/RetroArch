@@ -76,6 +76,7 @@ enum xmb_shader_pipeline
    XMB_SHADER_PIPELINE_RIBBON,
    XMB_SHADER_PIPELINE_SIMPLE_SNOW,
    XMB_SHADER_PIPELINE_SNOW,
+   XMB_SHADER_PIPELINE_BOKEH,
    XMB_SHADER_PIPELINE_LAST
 };
 
@@ -105,6 +106,11 @@ typedef struct menu_display_ctx_clearcolor
    float a;
 } menu_display_ctx_clearcolor_t;
 
+typedef struct menu_display_frame_info
+{
+   bool shadows_enable;
+} menu_display_frame_info_t;
+
 typedef struct menu_display_ctx_draw
 {
    float x;
@@ -123,6 +129,7 @@ typedef struct menu_display_ctx_draw
    {
       unsigned id;
       const void *backend_data;
+      bool active;
    } pipeline;
 } menu_display_ctx_draw_t;
 
@@ -231,7 +238,7 @@ void menu_display_clear_color(menu_display_ctx_clearcolor_t *color);
 void menu_display_draw(menu_display_ctx_draw_t *draw);
 
 void menu_display_draw_pipeline(menu_display_ctx_draw_t *draw);
-void menu_display_draw_bg(menu_display_ctx_draw_t *draw);
+void menu_display_draw_bg(menu_display_ctx_draw_t *draw, bool add_opacity);
 void menu_display_draw_gradient(menu_display_ctx_draw_t *draw);
 void menu_display_draw_quad(int x, int y, unsigned w, unsigned h,
       unsigned width, unsigned height,
@@ -271,8 +278,6 @@ void menu_display_draw_text(
       float x, float y, int width, int height,
       uint32_t color, enum text_alignment text_align,
       float scale_factor, bool shadows_enable, float shadow_offset);
-
-bool menu_display_shader_pipeline_active(void);
 
 void menu_display_set_alpha(float *color, float alpha_value);
 

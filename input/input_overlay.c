@@ -19,14 +19,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <compat/posix_string.h>
-#include <file/file_path.h>
-#include <retro_assert.h>
-#include <lists/string_list.h>
-#include <file/config_file.h>
-#include <formats/image.h>
 #include <clamping.h>
-#include <rhash.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -36,7 +29,6 @@
 #include "../menu/menu_driver.h"
 #endif
 
-#include "../configuration.h"
 #include "../verbosity.h"
 
 #include "input_overlay.h"
@@ -255,7 +247,8 @@ static bool inside_hitbox(const struct overlay_desc *desc, float x, float y)
       }
 
       case OVERLAY_HITBOX_RECT:
-         return (fabs(x - desc->x) <= desc->range_x_mod) &&
+         return 
+            (fabs(x - desc->x) <= desc->range_x_mod) &&
             (fabs(y - desc->y) <= desc->range_y_mod);
    }
 
@@ -279,20 +272,11 @@ static void input_overlay_poll(
       int16_t norm_x, int16_t norm_y)
 {
    size_t i;
-   float x, y;
-
-   memset(out, 0, sizeof(*out));
-
-   if (!ol->enable)
-   {
-      ol->blocked = false;
-      return;
-   }
 
    /* norm_x and norm_y is in [-0x7fff, 0x7fff] range,
     * like RETRO_DEVICE_POINTER. */
-   x = (float)(norm_x + 0x7fff) / 0xffff;
-   y = (float)(norm_y + 0x7fff) / 0xffff;
+   float x = (float)(norm_x + 0x7fff) / 0xffff;
+   float y = (float)(norm_y + 0x7fff) / 0xffff;
 
    x -= ol->active->mod_x;
    y -= ol->active->mod_y;
@@ -329,10 +313,10 @@ static void input_overlay_poll(
             break;
          default:
             {
-               float x_val     = x_dist / desc->range_x;
-               float y_val     = y_dist / desc->range_y;
-               float x_val_sat = x_val / desc->analog_saturate_pct;
-               float y_val_sat = y_val / desc->analog_saturate_pct;
+               float x_val       = x_dist / desc->range_x;
+               float y_val       = y_dist / desc->range_y;
+               float x_val_sat   = x_val / desc->analog_saturate_pct;
+               float y_val_sat   = y_val / desc->analog_saturate_pct;
 
                unsigned int base = (desc->type == OVERLAY_TYPE_ANALOG_RIGHT) ? 2 : 0;
 
@@ -441,10 +425,10 @@ static void input_overlay_poll_clear(input_overlay_t *ol, float opacity)
 
       desc->range_x_mod = desc->range_x;
       desc->range_y_mod = desc->range_y;
-      desc->updated = false;
+      desc->updated     = false;
 
-      desc->delta_x = 0.0f;
-      desc->delta_y = 0.0f;
+      desc->delta_x     = 0.0f;
+      desc->delta_y     = 0.0f;
       input_overlay_update_desc_geom(ol, desc);
    }
 }
@@ -468,18 +452,6 @@ void input_overlay_next(input_overlay_t *ol, float opacity)
 
    ol->blocked    = true;
    ol->next_index = (ol->index + 1) % ol->size;
-}
-
-/**
- * input_overlay_full_screen:
- *
- * Checks if the overlay is fullscreen.
- *
- * Returns: true (1) if overlay is fullscreen, otherwise false (0).
- **/
-static bool input_overlay_full_screen(input_overlay_t *ol)
-{
-   return ol->active->full_screen;
 }
 
 /**
@@ -507,7 +479,6 @@ void input_overlay_loaded(void *task_data, void *user_data, const char *err)
 {
    size_t i;
    overlay_task_data_t              *data = (overlay_task_data_t*)task_data;
-   settings_t                   *settings = config_get_ptr();
    input_overlay_t                    *ol = NULL;
    const video_overlay_interface_t *iface = NULL;
 
@@ -516,19 +487,16 @@ void input_overlay_loaded(void *task_data, void *user_data, const char *err)
 
 #ifdef HAVE_MENU
    /* We can't display when the menu is up */
-   if (settings->input.overlay_hide_in_menu && menu_driver_ctl(RARCH_MENU_CTL_IS_ALIVE, NULL))
+   if (data->hide_in_menu && menu_driver_ctl(RARCH_MENU_CTL_IS_ALIVE, NULL))
    {
-      if (settings->input.overlay_enable)
+      if (data->overlay_enable)
          goto abort_load;
    }
 #endif
 
-   if (!settings->input.overlay_enable)
-      goto abort_load;
-
-   if (!video_driver_overlay_interface(&iface) || !iface)
+   if (!data->overlay_enable || !video_driver_overlay_interface(&iface) || !iface)
    {
-      RARCH_ERR("Overlay interface is not present in video driver.\n");
+      RARCH_ERR("Overlay interface is not present in video driver, or not enabled.\n");
       goto abort_load;
    }
 
@@ -536,13 +504,12 @@ void input_overlay_loaded(void *task_data, void *user_data, const char *err)
    ol->overlays   = data->overlays;
    ol->size       = data->size;
    ol->active     = data->active;
-   ol->iface      = iface;
-   ol->iface_data = video_driver_get_ptr(true);
+   ol->iface      = iface; ol->iface_data = video_driver_get_ptr(true);
 
-   input_overlay_load_active(ol, settings->input.overlay_opacity);
-   input_overlay_enable(ol, settings->input.overlay_enable);
+   input_overlay_load_active(ol, data->overlay_opacity);
+   input_overlay_enable(ol, data->overlay_enable);
 
-   input_overlay_set_scale_factor(ol, settings->input.overlay_scale);
+   input_overlay_set_scale_factor(ol, data->overlay_scale);
 
    ol->next_index = (ol->index + 1) % ol->size;
    ol->state      = OVERLAY_STATUS_NONE;
@@ -599,42 +566,50 @@ bool input_overlay_key_pressed(input_overlay_t *ol, int key)
  *
  * Poll pressed buttons/keys on currently active overlay.
  **/
-void input_poll_overlay(input_overlay_t *ol, float opacity)
+void input_poll_overlay(input_overlay_t *ol, float opacity, unsigned analog_dpad_mode,
+      float axis_threshold)
 {
+   rarch_joypad_info_t joypad_info;
    input_overlay_state_t old_key_state;
    unsigned i, j, device;
    uint16_t key_mod                = 0;
    bool polled                     = false;
-   settings_t *settings            = config_get_ptr();
-   input_overlay_state_t *ol_state = NULL;
-   
-   if (!input_overlay_is_alive(ol))
-      return;
-
-   ol_state = &ol->overlay_state;
+   input_overlay_state_t *ol_state = &ol->overlay_state;
 
    if (!ol_state)
       return;
+
+   joypad_info.joy_idx             = 0;
+   joypad_info.auto_binds          = NULL;
+   joypad_info.axis_threshold      = 0.0f;
 
    memcpy(old_key_state.keys, ol_state->keys,
          sizeof(ol_state->keys));
    memset(ol_state, 0, sizeof(*ol_state));
 
-   device = input_overlay_full_screen(ol) ?
+   device = ol->active->full_screen ?
       RARCH_DEVICE_POINTER_SCREEN : RETRO_DEVICE_POINTER;
 
    for (i = 0;
-         current_input->input_state(current_input_data, NULL,
+         current_input->input_state(current_input_data, joypad_info,
+            NULL,
             0, device, i, RETRO_DEVICE_ID_POINTER_PRESSED);
          i++)
    {
       input_overlay_state_t polled_data;
-      int16_t x = current_input->input_state(current_input_data, NULL,
+      int16_t x = current_input->input_state(current_input_data, joypad_info,
+            NULL,
             0, device, i, RETRO_DEVICE_ID_POINTER_X);
-      int16_t y = current_input->input_state(current_input_data, NULL,
+      int16_t y = current_input->input_state(current_input_data, joypad_info,
+            NULL,
             0, device, i, RETRO_DEVICE_ID_POINTER_Y);
 
-      input_overlay_poll(ol, &polled_data, x, y);
+      memset(&polled_data, 0, sizeof(struct input_overlay_state));
+
+      if (ol->enable)
+         input_overlay_poll(ol, &polled_data, x, y);
+      else
+         ol->blocked = false;
 
       ol_state->buttons |= polled_data.buttons;
 
@@ -650,19 +625,19 @@ void input_poll_overlay(input_overlay_t *ol, float opacity)
       polled = true;
    }
 
-   if (OVERLAY_GET_KEY(ol_state, RETROK_LSHIFT) ||
+   if (  OVERLAY_GET_KEY(ol_state, RETROK_LSHIFT) ||
          OVERLAY_GET_KEY(ol_state, RETROK_RSHIFT))
       key_mod |= RETROKMOD_SHIFT;
 
    if (OVERLAY_GET_KEY(ol_state, RETROK_LCTRL) ||
-    OVERLAY_GET_KEY(ol_state, RETROK_RCTRL))
+       OVERLAY_GET_KEY(ol_state, RETROK_RCTRL))
       key_mod |= RETROKMOD_CTRL;
 
-   if (OVERLAY_GET_KEY(ol_state, RETROK_LALT) ||
+   if (  OVERLAY_GET_KEY(ol_state, RETROK_LALT) ||
          OVERLAY_GET_KEY(ol_state, RETROK_RALT))
       key_mod |= RETROKMOD_ALT;
 
-   if (OVERLAY_GET_KEY(ol_state, RETROK_LMETA) ||
+   if (  OVERLAY_GET_KEY(ol_state, RETROK_LMETA) ||
          OVERLAY_GET_KEY(ol_state, RETROK_RMETA))
       key_mod |= RETROKMOD_META;
 
@@ -698,7 +673,7 @@ void input_poll_overlay(input_overlay_t *ol, float opacity)
 
    /* Check for analog_dpad_mode.
     * Map analogs to d-pad buttons when configured. */
-   switch (settings->input.analog_dpad_mode[0])
+   switch (analog_dpad_mode)
    {
       case ANALOG_DPAD_LSTICK:
       case ANALOG_DPAD_RSTICK:
@@ -706,19 +681,19 @@ void input_poll_overlay(input_overlay_t *ol, float opacity)
          float analog_x, analog_y;
          unsigned analog_base = 2;
 
-         if (settings->input.analog_dpad_mode[0] == ANALOG_DPAD_LSTICK)
+         if (analog_dpad_mode == ANALOG_DPAD_LSTICK)
             analog_base = 0;
 
          analog_x = (float)ol_state->analog[analog_base + 0] / 0x7fff;
          analog_y = (float)ol_state->analog[analog_base + 1] / 0x7fff;
 
-         if (analog_x <= -settings->input.axis_threshold)
+         if (analog_x <= -axis_threshold)
             BIT32_SET(ol_state->buttons, RETRO_DEVICE_ID_JOYPAD_LEFT);
-         if (analog_x >=  settings->input.axis_threshold)
+         if (analog_x >=  axis_threshold)
             BIT32_SET(ol_state->buttons, RETRO_DEVICE_ID_JOYPAD_RIGHT);
-         if (analog_y <= -settings->input.axis_threshold)
+         if (analog_y <= -axis_threshold)
             BIT32_SET(ol_state->buttons, RETRO_DEVICE_ID_JOYPAD_UP);
-         if (analog_y >=  settings->input.axis_threshold)
+         if (analog_y >=  axis_threshold)
             BIT32_SET(ol_state->buttons, RETRO_DEVICE_ID_JOYPAD_DOWN);
          break;
       }
@@ -733,7 +708,8 @@ void input_poll_overlay(input_overlay_t *ol, float opacity)
       input_overlay_poll_clear(ol, opacity);
 }
 
-void input_state_overlay(input_overlay_t *ol, int16_t *ret, unsigned port, unsigned device, unsigned idx,
+void input_state_overlay(input_overlay_t *ol, int16_t *ret,
+      unsigned port, unsigned device, unsigned idx,
       unsigned id)
 {
    input_overlay_state_t *ol_state = ol ? &ol->overlay_state : NULL;

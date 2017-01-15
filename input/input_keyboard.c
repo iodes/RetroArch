@@ -21,9 +21,10 @@
 
 #include "input_keyboard.h"
 
+#include "input_driver.h"
+
 #include <encodings/utf.h>
 
-#include "../configuration.h"
 #include "../runloop.h"
 
 struct input_keyboard_line
@@ -60,7 +61,7 @@ static void osk_update_last_codepoint(const char *word)
 
    if (letter[0] == 0)
    {
-      osk_last_codepoint = 0;
+      osk_last_codepoint     = 0;
       osk_last_codepoint_len = 0;
       return;
    }
@@ -72,7 +73,7 @@ static void osk_update_last_codepoint(const char *word)
 
       if (letter[0] == 0)
       {
-         osk_last_codepoint = codepoint;
+         osk_last_codepoint     = codepoint;
          osk_last_codepoint_len = len;
          break;
       }

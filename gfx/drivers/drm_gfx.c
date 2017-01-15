@@ -30,7 +30,6 @@
 
 #include "../font_driver.h"
 #include "../video_context_driver.h"
-#include "../../configuration.h"
 #include "../../retroarch.h"
 #include "../../runloop.h"
 
@@ -744,7 +743,8 @@ static void *drm_gfx_init(const video_info_t *video,
 }
 
 static bool drm_gfx_frame(void *data, const void *frame, unsigned width,
-      unsigned height, uint64_t frame_count, unsigned pitch, const char *msg)
+      unsigned height, uint64_t frame_count, unsigned pitch, const char *msg,
+      video_frame_info_t video_info)
 {
    struct drm_video *_drmvars = data;
 
@@ -781,7 +781,9 @@ static bool drm_gfx_frame(void *data, const void *frame, unsigned width,
    if (_drmvars->menu_active)
    {
       char buf[128];
-      video_monitor_get_fps(buf, sizeof(buf), NULL, 0);
+      buf[0] = '\0';
+
+      video_monitor_get_fps(video_info, buf, sizeof(buf), NULL, 0);
    }
 
    /* Update main surface: locate free page, blit and flip. */

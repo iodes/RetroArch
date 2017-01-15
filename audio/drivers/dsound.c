@@ -35,7 +35,6 @@
 #include <queues/fifo_queue.h>
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 #ifdef _XBOX
@@ -303,7 +302,9 @@ static BOOL CALLBACK enumerate_cb(LPGUID guid, LPCSTR desc, LPCSTR module, LPVOI
    return TRUE;
 }
 
-static void *dsound_init(const char *device, unsigned rate, unsigned latency)
+static void *dsound_init(const char *device, unsigned rate, unsigned latency,
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    WAVEFORMATEX wfx      = {0};
    DSBUFFERDESC bufdesc  = {0};

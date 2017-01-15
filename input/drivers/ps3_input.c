@@ -28,7 +28,7 @@
 
 #include "../../defines/ps3_defines.h"
 
-#include "../../configuration.h"
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
 
 #ifdef HAVE_MOUSE
@@ -100,11 +100,12 @@ static int16_t ps3_mouse_device_state(ps3_input_t *ps3,
 #endif
 
 static int16_t ps3_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
       const struct retro_keybind **binds,
       unsigned port, unsigned device,
       unsigned idx, unsigned id)
 {
-   ps3_input_t *ps3 = (ps3_input_t*)data;
+   ps3_input_t *ps3           = (ps3_input_t*)data;
 
    if (!ps3)
       return 0;
@@ -112,12 +113,10 @@ static int16_t ps3_input_state(void *data,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return input_joypad_pressed(ps3->joypad, port, binds[port], id);
-         break;
+         return input_joypad_pressed(ps3->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
-            return input_joypad_analog(ps3->joypad, port, idx, id, binds[port]);
+            return input_joypad_analog(ps3->joypad, joypad_info, port, idx, id, binds[port]);
          break;
 #if 0
       case RETRO_DEVICE_SENSOR_ACCELEROMETER:
@@ -164,14 +163,13 @@ static void ps3_input_free_input(void *data)
 }
 
 
-static void* ps3_input_init(void)
+static void* ps3_input_init(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    ps3_input_t *ps3 = (ps3_input_t*)calloc(1, sizeof(*ps3));
    if (!ps3)
       return NULL;
 
-   ps3->joypad = input_joypad_init_driver(settings->input.joypad_driver, ps3);
+   ps3->joypad = input_joypad_init_driver(joypad_driver, ps3);
 
    if (ps3->joypad)
       ps3->joypad->init(ps3);

@@ -23,8 +23,8 @@
 #include "../../config.h"
 #endif
 
-#include "../../configuration.h"
 #include "../input_config.h"
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
 
 #define MAX_PADS 1
@@ -45,7 +45,9 @@ static void ctr_input_poll(void *data)
       ctr->joypad->poll();
 }
 
-static int16_t ctr_input_state(void *data, const struct retro_keybind **binds,
+static int16_t ctr_input_state(void *data, 
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device,
       unsigned idx, unsigned id)
 {
@@ -57,12 +59,10 @@ static int16_t ctr_input_state(void *data, const struct retro_keybind **binds,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return input_joypad_pressed(ctr->joypad, port, binds[port], id);
-         break;
+         return input_joypad_pressed(ctr->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
-            return input_joypad_analog(ctr->joypad, port, idx, id, binds[port]);
+            return input_joypad_analog(ctr->joypad, joypad_info, port, idx, id, binds[port]);
          break;
    }
 
@@ -79,14 +79,13 @@ static void ctr_input_free_input(void *data)
    free(data);
 }
 
-static void* ctr_input_initialize(void)
+static void* ctr_input_init(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    ctr_input_t *ctr = (ctr_input_t*)calloc(1, sizeof(*ctr));
    if (!ctr)
       return NULL;
 
-   ctr->joypad = input_joypad_init_driver(settings->input.joypad_driver, ctr);
+   ctr->joypad = input_joypad_init_driver(joypad_driver, ctr);
 
    return ctr;
 }
@@ -148,7 +147,7 @@ static void ctr_input_keyboard_mapping_set_block(void *data, bool value)
 }
 
 input_driver_t input_ctr = {
-   ctr_input_initialize,
+   ctr_input_init,
    ctr_input_poll,
    ctr_input_state,
    ctr_input_meta_key_pressed,

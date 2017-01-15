@@ -31,8 +31,11 @@ enum filebrowser_enums
    FILEBROWSER_NONE              = 0,
    FILEBROWSER_SELECT_DIR,
    FILEBROWSER_SCAN_DIR,
+   FILEBROWSER_SELECT_FILE,
    FILEBROWSER_SELECT_COLLECTION
 };
+
+enum filebrowser_enums filebrowser_get_type(void);
 
 void filebrowser_clear_type(void);
 

@@ -37,6 +37,11 @@
 
 static enum filebrowser_enums filebrowser_types = FILEBROWSER_NONE;
 
+enum filebrowser_enums filebrowser_get_type(void)
+{
+   return filebrowser_types;
+}
+
 void filebrowser_clear_type(void)
 {
    filebrowser_types = FILEBROWSER_NONE;
@@ -44,7 +49,8 @@ void filebrowser_clear_type(void)
 
 void filebrowser_set_type(enum filebrowser_enums type)
 {
-   filebrowser_types = type;
+   if (filebrowser_types != FILEBROWSER_SELECT_FILE)
+      filebrowser_types = type;
 }
 
 void filebrowser_parse(void *data, unsigned type_data, bool extensions_honored)
@@ -61,6 +67,7 @@ void filebrowser_parse(void *data, unsigned type_data, bool extensions_honored)
    bool path_is_compressed              = path_is_compressed_file(info->path);
    bool filter_ext                      =
       settings->menu.navigation.browser.filter.supported_extensions_enable;
+
 
    if (string_is_equal(info->label,
             msg_hash_to_str(MENU_ENUM_LABEL_SCAN_FILE)))
@@ -202,6 +209,8 @@ void filebrowser_parse(void *data, unsigned type_data, bool extensions_honored)
                   else
                      file_type = FILE_TYPE_IMAGE;
 #endif
+                  if (filebrowser_types == FILEBROWSER_SELECT_FILE)
+                     file_type = FILE_TYPE_IMAGE;
                   break;
                default:
                   break;

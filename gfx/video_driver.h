@@ -54,6 +54,10 @@ typedef struct video_info
 
    bool force_aspect;
 
+   unsigned swap_interval;
+
+   bool font_enable;
+
 #ifdef GEKKO
    /* TODO - we can't really have driver system-specific
     * variables in here. There should be some
@@ -80,6 +84,23 @@ typedef struct video_info
    uintptr_t parent;
 #endif
 } video_info_t;
+
+typedef struct video_frame_info
+{
+   float refresh_rate;
+   bool shared_context;
+   bool black_frame_insertion;
+   bool hard_sync;
+   unsigned hard_sync_frames;
+   bool fps_show;
+   bool scale_integer;
+   unsigned aspect_ratio_idx;
+   bool post_filter_record;
+   unsigned max_swapchain_images;
+   bool windowed_fullscreen;
+   unsigned monitor_index;
+   bool font_enable;
+} video_frame_info_t;
 
 /* Optionally implemented interface to poke more
  * deeply into video driver. */
@@ -141,7 +162,7 @@ typedef struct video_viewport
 typedef bool (*video_driver_frame_t)(void *data,
       const void *frame, unsigned width,
       unsigned height, uint64_t frame_count,
-      unsigned pitch, const char *msg);
+      unsigned pitch, const char *msg, video_frame_info_t video_info);
 
 typedef struct video_driver
 {
@@ -263,7 +284,6 @@ void video_driver_set_own_driver(void);
 void video_driver_unset_own_driver(void);
 bool video_driver_owns_driver(void);
 bool video_driver_is_hw_context(void);
-bool video_driver_is_threaded(void);
 void video_driver_deinit_hw_context(void);
 struct retro_hw_render_callback *video_driver_get_hw_context(void);
 const struct retro_hw_render_context_negotiation_interface 
@@ -286,6 +306,7 @@ bool video_driver_get_hw_render_interface(const struct
 bool video_driver_get_viewport_info(struct video_viewport *viewport);
 void video_driver_set_title_buf(void);
 void video_driver_monitor_adjust_system_rates(void);
+bool video_driver_is_threaded(void);
 
 /**
  * video_driver_find_handle:
@@ -442,6 +463,7 @@ bool video_monitor_fps_statistics(double *refresh_rate,
 
 /**
  * video_monitor_get_fps:
+ * @video_info    : information about the video frame
  * @buf           : string suitable for Window title
  * @size          : size of buffer.
  * @buf_fps       : string of raw FPS only (optional).
@@ -453,7 +475,9 @@ bool video_monitor_fps_statistics(double *refresh_rate,
  * otherwise false.
  *
  **/
-bool video_monitor_get_fps(char *buf, size_t size,
+bool video_monitor_get_fps(
+      video_frame_info_t video_info,
+      char *buf, size_t size,
       char *buf_fps, size_t size_fps);
 
 unsigned video_pixel_get_alignment(unsigned pitch);
@@ -513,6 +537,8 @@ bool video_driver_texture_load(void *data,
       uintptr_t *id);
 
 bool video_driver_texture_unload(uintptr_t *id);
+
+void video_driver_build_info(video_frame_info_t *video_info);
 
 void video_driver_reinit(void);
 

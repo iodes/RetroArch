@@ -105,17 +105,16 @@ static bool gfx_ctx_vc_set_resize(void *data, unsigned width, unsigned height)
    return false;
 }
 
-static void gfx_ctx_vc_update_window_title(void *data)
+static void gfx_ctx_vc_update_window_title(void *data, video_frame_info_t video_info)
 {
-   char buf[128]        = {0};
-   char buf_fps[128]    = {0};
-   settings_t *settings = config_get_ptr();
+   char buf[128];
+   char buf_fps[128];
 
-   (void)data;
+   buf[0] = buf_fps[0]  = '\0';
 
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
@@ -158,7 +157,7 @@ static void gfx_ctx_vc_get_video_size(void *data,
 
 static void gfx_ctx_vc_destroy(void *data);
 
-static void *gfx_ctx_vc_init(void *video_driver)
+static void *gfx_ctx_vc_init(video_frame_info_t video_info, void *video_driver)
 {
    VC_DISPMANX_ALPHA_T alpha;
    EGLint n, major, minor;
@@ -320,6 +319,7 @@ static void gfx_ctx_vc_set_swap_interval(void *data, unsigned swap_interval)
 }
 
 static bool gfx_ctx_vc_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -608,7 +608,7 @@ error:
    return false;
 }
 
-static void gfx_ctx_vc_swap_buffers(void *data)
+static void gfx_ctx_vc_swap_buffers(void *data, video_frame_info_t video_info)
 {
    vc_ctx_data_t *vc = (vc_ctx_data_t*)data;
 

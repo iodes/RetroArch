@@ -762,7 +762,8 @@ static void sunxi_setup_scale (void *data,
 }
 
 static bool sunxi_gfx_frame(void *data, const void *frame, unsigned width,
-      unsigned height, uint64_t frame_count, unsigned pitch, const char *msg)
+      unsigned height, uint64_t frame_count, unsigned pitch, const char *msg,
+      video_frame_info_t video_info)
 {
    struct sunxi_video *_dispvars = (struct sunxi_video*)data;
 
@@ -780,9 +781,11 @@ static bool sunxi_gfx_frame(void *data, const void *frame, unsigned width,
 
    if (_dispvars->menu_active)
    {
-      char buf[128] = {0};
+      char buf[128];
 
-      video_monitor_get_fps(buf, sizeof(buf), NULL, 0);
+      buf[0] = '\0';
+
+      video_monitor_get_fps(video_info, buf, sizeof(buf), NULL, 0);
       ioctl(_dispvars->sunxi_disp->fd_fb, FBIO_WAITFORVSYNC, 0);
       return true;
    }

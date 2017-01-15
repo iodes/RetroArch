@@ -138,26 +138,20 @@ static void menu_action_setting_disp_set_label_shader_filter_pass(
       const char *path,
       char *s2, size_t len2)
 {
-   unsigned pass = 0;
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   struct video_shader *shader = NULL;
+   struct video_shader_pass *shader_pass = menu_shader_manager_get_pass(
+         type - MENU_SETTINGS_SHADER_PASS_FILTER_0);
 #endif
-
-   (void)pass;
 
    *s = '\0';
    *w = 19;
    strlcpy(s2, path, len2);
 
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
+   if (!shader_pass)
       return;
 
-  pass = (type - MENU_SETTINGS_SHADER_PASS_FILTER_0);
-
-  switch (shader->pass[pass].filter)
+  switch (shader_pass->filter)
   {
      case 0:
         strlcpy(s, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_DONT_CARE),
@@ -235,6 +229,11 @@ static void menu_action_setting_disp_set_label_pipeline(
                msg_hash_to_str(
                   MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_SNOW), len);
          break;
+      case XMB_SHADER_PIPELINE_BOKEH:
+         strlcpy(s,
+               msg_hash_to_str(
+                  MENU_ENUM_LABEL_VALUE_SHADER_PIPELINE_BOKEH), len);
+         break;
    }
 
    strlcpy(s2, path, len2);
@@ -250,18 +249,11 @@ static void menu_action_setting_disp_set_label_shader_num_passes(
       const char *path,
       char *s2, size_t len2)
 {
-#if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   struct video_shader *shader = NULL;
-#endif
-
    *s = '\0';
    *w = 19;
    strlcpy(s2, path, len2);
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (shader)
-      snprintf(s, len, "%u", shader->passes);
+   snprintf(s, len, "%u", menu_shader_manager_get_amount_passes());
 #endif
 }
 
@@ -275,11 +267,9 @@ static void menu_action_setting_disp_set_label_shader_pass(
       char *s2, size_t len2)
 {
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   struct video_shader *shader = NULL;
+   struct video_shader_pass *shader_pass = menu_shader_manager_get_pass(
+         type - MENU_SETTINGS_SHADER_PASS_0);
 #endif
-   unsigned pass = (type - MENU_SETTINGS_SHADER_PASS_0);
-
-   (void)pass;
 
    *s = '\0';
    *w = 19;
@@ -287,14 +277,11 @@ static void menu_action_setting_disp_set_label_shader_pass(
    strlcpy(s, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE), len);
 
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
+   if (!shader_pass)
       return;
 
-   if (!string_is_empty(shader->pass[pass].source.path))
-      fill_pathname_base(s,
-            shader->pass[pass].source.path, len);
+   if (!string_is_empty(shader_pass->source.path))
+      fill_pathname_base(s, shader_pass->source.path, len);
 #endif
 }
 
@@ -366,8 +353,8 @@ static void menu_action_setting_disp_set_label_shader_preset_parameter(
       char *s2, size_t len2)
 {
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   const struct video_shader_parameter *param = NULL;
-   struct video_shader *shader = NULL;
+   const struct video_shader_parameter *param = menu_shader_manager_get_parameters(
+         type - MENU_SETTINGS_SHADER_PRESET_PARAMETER_0);
 #endif
 
    *s = '\0';
@@ -375,18 +362,9 @@ static void menu_action_setting_disp_set_label_shader_preset_parameter(
    strlcpy(s2, path, len2);
 
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
-      return;
-
-   param = &shader->parameters[type - MENU_SETTINGS_SHADER_PRESET_PARAMETER_0];
-
-   if (!param)
-      return;
-
-   snprintf(s, len, "%.2f [%.2f %.2f]",
-         param->current, param->minimum, param->maximum);
+   if (param)
+      snprintf(s, len, "%.2f [%.2f %.2f]",
+            param->current, param->minimum, param->maximum);
 #endif
 }
 
@@ -402,7 +380,8 @@ static void menu_action_setting_disp_set_label_shader_scale_pass(
    unsigned pass               = 0;
    unsigned scale_value        = 0;
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   struct video_shader *shader = NULL;
+   struct video_shader_pass *shader_pass = menu_shader_manager_get_pass(
+         type - MENU_SETTINGS_SHADER_PASS_SCALE_0);
 #endif
 
    *s = '\0';
@@ -413,13 +392,10 @@ static void menu_action_setting_disp_set_label_shader_scale_pass(
    (void)scale_value;
 
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_HLSL)
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
+   if (!shader_pass)
       return;
 
-   pass        = (type - MENU_SETTINGS_SHADER_PASS_SCALE_0);
-   scale_value = shader->pass[pass].fbo.scale_x;
+   scale_value = shader_pass->fbo.scale_x;
 
    if (!scale_value)
       strlcpy(s, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_DONT_CARE), len);
@@ -1137,19 +1113,6 @@ static void menu_action_setting_disp_set_label_menu_file_plain(
          path, "(FILE)", s2, len2);
 }
 
-static void menu_action_setting_disp_set_label_menu_file_image(
-      file_list_t* list,
-      unsigned *w, unsigned type, unsigned i,
-      const char *label,
-      char *s, size_t len,
-      const char *entry_label,
-      const char *path,
-      char *s2, size_t len2)
-{
-   menu_action_setting_generic_disp_set_label(w, s, len,
-         path, "(IMG)", s2, len2);
-}
-
 static void menu_action_setting_disp_set_label_menu_file_imageviewer(
       file_list_t* list,
       unsigned *w, unsigned type, unsigned i,
@@ -1806,9 +1769,6 @@ static int menu_cbs_init_bind_get_string_representation_compare_type(
                menu_action_setting_disp_set_label_music);
             break;
          case FILE_TYPE_IMAGE:
-            BIND_ACTION_GET_VALUE(cbs,
-               menu_action_setting_disp_set_label_menu_file_image);
-            break;
          case FILE_TYPE_IMAGEVIEWER:
             BIND_ACTION_GET_VALUE(cbs,
                menu_action_setting_disp_set_label_menu_file_imageviewer);

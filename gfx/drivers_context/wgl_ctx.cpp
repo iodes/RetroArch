@@ -331,7 +331,7 @@ static void gfx_ctx_wgl_check_window(void *data, bool *quit,
    }
 }
 
-static void gfx_ctx_wgl_swap_buffers(void *data)
+static void gfx_ctx_wgl_swap_buffers(void *data, video_frame_info_t video_info)
 {
    (void)data;
 
@@ -386,19 +386,18 @@ static bool gfx_ctx_wgl_set_resize(void *data,
    return false;
 }
 
-static void gfx_ctx_wgl_update_window_title(void *data)
+static void gfx_ctx_wgl_update_window_title(void *data, video_frame_info_t video_info)
 {
    char buf[128];
    char buf_fps[128];
-   settings_t      *settings = config_get_ptr();
    const ui_window_t *window = ui_companion_driver_get_window_ptr();
 
    buf[0] = buf_fps[0] = '\0';
 
-   if (window && video_monitor_get_fps(buf, sizeof(buf),
+   if (window && video_monitor_get_fps(video_info, buf, sizeof(buf),
             buf_fps, sizeof(buf_fps)))
       window->set_title(&main_window, buf);
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
@@ -427,7 +426,7 @@ static void gfx_ctx_wgl_get_video_size(void *data,
    }
 }
 
-static void *gfx_ctx_wgl_init(void *video_driver)
+static void *gfx_ctx_wgl_init(video_frame_info_t video_info, void *video_driver)
 {
    WNDCLASSEX wndclass = {0};
 
@@ -526,6 +525,7 @@ static void gfx_ctx_wgl_destroy(void *data)
 }
 
 static bool gfx_ctx_wgl_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -561,12 +561,11 @@ error:
 static void gfx_ctx_wgl_input_driver(void *data,
       const input_driver_t **input, void **input_data)
 {
-   (void)data;
+   settings_t *settings = config_get_ptr();
+   dinput_wgl           = input_dinput.init(settings->input.joypad_driver);
 
-   dinput_wgl   = input_dinput.init();
-
-   *input       = dinput_wgl ? &input_dinput : NULL;
-   *input_data  = dinput_wgl;
+   *input               = dinput_wgl ? &input_dinput : NULL;
+   *input_data          = dinput_wgl;
 }
 
 static bool gfx_ctx_wgl_has_focus(void *data)

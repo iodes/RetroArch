@@ -30,8 +30,10 @@
 #include <compat/strl.h>
 #include <string/stdstring.h>
 
-#include "../common/epoll_common.h"
+#include "../input_config.h"
 #include "../input_driver.h"
+
+#include "../common/epoll_common.h"
 #include "../../configuration.h"
 #include "../../verbosity.h"
 #include "../../tasks/tasks_internal.h"
@@ -118,6 +120,14 @@ error:
    return false;
 }
 
+static const char *linuxraw_joypad_name(unsigned pad)
+{
+   if (pad >= MAX_USERS || string_is_empty(linuxraw_pads[pad].ident))
+      return NULL;
+
+   return linuxraw_pads[pad].ident;
+}
+
 static void handle_plugged_pad(void)
 {
    int i, rc;
@@ -136,7 +146,6 @@ static void handle_plugged_pad(void)
       for (i = 0; i < rc; i += event->len + sizeof(struct inotify_event))
       {
          unsigned idx;
-         autoconfig_params_t params;
 
          event = (struct inotify_event*)&event_buf[i];
 
@@ -146,12 +155,6 @@ static void handle_plugged_pad(void)
          idx = strtoul(event->name + 2, NULL, 0);
          if (idx >= MAX_USERS)
             continue;
-
-         /* TODO - implement VID/PID? */
-         params.display_name[0] = '\0';
-         params.vid             = 0;
-         params.pid             = 0;
-         params.idx             = idx;
 
          if (event->mask & IN_DELETE)
          {
@@ -166,8 +169,14 @@ static void handle_plugged_pad(void)
                linuxraw_pads[idx].fd = -1;
                *linuxraw_pads[idx].ident = '\0';
 
-
-               input_autoconfigure_connect(&params);
+               if (!input_autoconfigure_connect(
+                     NULL,
+                     NULL,
+                     linuxraw_joypad_name(idx),
+                     idx,
+                     0,
+                     0))
+                  input_config_set_device_name(idx, NULL);
             }
          }
          /* Sometimes, device will be created before access to it is established. */
@@ -182,10 +191,14 @@ static void handle_plugged_pad(void)
             if (     !string_is_empty(linuxraw_pads[idx].ident) 
                   && linuxraw_joypad_init_pad(path, &linuxraw_pads[idx]))
             {
-               strlcpy(params.name,   linuxraw_pads[idx].ident, sizeof(params.name));
-               strlcpy(params.driver, linuxraw_joypad.ident, sizeof(params.driver));
-
-               input_autoconfigure_connect(&params);
+               if (!input_autoconfigure_connect(
+                     linuxraw_pads[idx].ident,
+                     NULL,
+                     linuxraw_joypad.ident,
+                     idx,
+                     0,
+                     0))
+                  input_config_set_device_name(idx, linuxraw_joypad_name(idx));
             }
          }
       }
@@ -226,29 +239,27 @@ static bool linuxraw_joypad_init(void *data)
    for (i = 0; i < MAX_USERS; i++)
    {
       char path[PATH_MAX_LENGTH];
-      autoconfig_params_t params  = {{0}};
       struct linuxraw_joypad *pad = (struct linuxraw_joypad*)&linuxraw_pads[i];
       settings_t *settings        = config_get_ptr();
 
       path[0]                     = '\0';
 
-      params.idx                  = i;
       pad->fd                     = -1;
       pad->ident                  = settings->input.device_names[i];
       
       snprintf(path, sizeof(path), "/dev/input/js%u", i);
 
-      if (linuxraw_joypad_init_pad(path, pad))
-      {
-         strlcpy(params.name,   pad->ident, sizeof(params.name)); 
-         strlcpy(params.driver, "linuxraw", sizeof(params.driver));
+      if (!input_autoconfigure_connect(
+            pad->ident,
+            NULL,
+            "linuxraw",
+            i,
+            0,
+            0))
+         input_config_set_device_name(i, pad->ident);
 
-         /* TODO - implement VID/PID? */
-         input_autoconfigure_connect(&params);
+      if (linuxraw_joypad_init_pad(path, pad))
          linuxraw_poll_pad(pad);
-      }
-      else
-         input_autoconfigure_connect(&params);
    }
 
    linuxraw_inotify = inotify_init();
@@ -337,13 +348,6 @@ static bool linuxraw_joypad_query_pad(unsigned pad)
    return pad < MAX_USERS && linuxraw_pads[pad].fd >= 0;
 }
 
-static const char *linuxraw_joypad_name(unsigned pad)
-{
-   if (pad >= MAX_USERS || string_is_empty(linuxraw_pads[pad].ident))
-      return NULL;
-
-   return linuxraw_pads[pad].ident;
-}
 
 input_device_driver_t linuxraw_joypad = {
    linuxraw_joypad_init,

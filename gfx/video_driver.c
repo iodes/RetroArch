@@ -22,6 +22,7 @@
 #include <file/config_file.h>
 #include <features/features_cpu.h>
 #include <file/file_path.h>
+#include <string/stdstring.h>
 
 #include <retro_assert.h>
 #include <gfx/scaler/pixconv.h>
@@ -119,7 +120,9 @@ static video_pixel_scaler_t *video_driver_scaler_ptr     = NULL;
  * TODO: Refactor this better. */
 static struct retro_hw_render_callback hw_render;
 
-static const struct retro_hw_render_context_negotiation_interface *hw_render_context_negotiation = NULL;
+static const struct 
+retro_hw_render_context_negotiation_interface *
+hw_render_context_negotiation                            = NULL;
 
 static bool video_driver_use_rgba                        = false;
 static bool video_driver_data_own                        = false;
@@ -299,11 +302,11 @@ bool video_driver_is_threaded(void)
 {
 #ifdef HAVE_THREADS
    settings_t *settings = config_get_ptr();
-   return settings->video.threaded
-      && !video_driver_is_hw_context();
-#else
-   return false;
+   if (!video_driver_is_hw_context()
+         && settings->video.threaded)
+      return true;
 #endif
+   return false;
 }
 
 /**
@@ -382,16 +385,11 @@ static void deinit_video_filter(void)
 static void init_video_filter(enum retro_pixel_format colfmt)
 {
    unsigned width, height, pow2_x, pow2_y, maxsize;
-   void *buf                        = NULL;
-   struct retro_game_geometry *geom = NULL;
-   settings_t *settings             = config_get_ptr();
+   void *buf                            = NULL;
+   struct retro_game_geometry *geom     = NULL;
+   settings_t *settings                 = config_get_ptr();
    struct retro_system_av_info *av_info =
       video_viewport_get_system_av_info();
-
-   deinit_video_filter();
-
-   if (!*settings->path.softfilter_plugin)
-      return;
 
    /* Deprecated format. Gets pre-converted. */
    if (colfmt == RETRO_PIXEL_FORMAT_0RGB1555)
@@ -409,8 +407,8 @@ static void init_video_filter(enum retro_pixel_format colfmt)
    if (!geom)
       return;
 
-   width   = geom->max_width;
-   height  = geom->max_height;
+   width                     = geom->max_width;
+   height                    = geom->max_height;
 
    video_driver_state_filter = rarch_softfilter_new(
          settings->path.softfilter_plugin,
@@ -430,11 +428,12 @@ static void init_video_filter(enum retro_pixel_format colfmt)
    maxsize                             = MAX(pow2_x, pow2_y);
    video_driver_state_scale            = maxsize / RARCH_SCALE_BASE;
    video_driver_state_out_rgb32        = rarch_softfilter_get_output_format(
-         video_driver_state_filter) == RETRO_PIXEL_FORMAT_XRGB8888;
+                                         video_driver_state_filter) == 
+                                         RETRO_PIXEL_FORMAT_XRGB8888;
 
-   video_driver_state_out_bpp   = 
-      video_driver_state_out_rgb32 ?
-      sizeof(uint32_t) : sizeof(uint16_t);
+   video_driver_state_out_bpp          = video_driver_state_out_rgb32 ?
+                                         sizeof(uint32_t)             : 
+                                         sizeof(uint16_t);
 
    /* TODO: Aligned output. */
 #ifdef _3DS
@@ -493,9 +492,8 @@ static void video_monitor_compute_fps_statistics(void)
    double avg_fps       = 0.0;
    double stddev        = 0.0;
    unsigned samples     = 0;
-   settings_t *settings = config_get_ptr();
 
-   if (settings->video.threaded)
+   if (video_driver_is_threaded())
    {
       RARCH_LOG("Monitor FPS estimation is disabled for threaded video.\n");
       return;
@@ -638,7 +636,11 @@ static bool init_video(void)
 
    runloop_ctl(RUNLOOP_CTL_SYSTEM_INFO_GET, &system);
 
-   init_video_filter(video_driver_pix_fmt);
+   deinit_video_filter();
+
+   if (!string_is_empty(settings->path.softfilter_plugin))
+      init_video_filter(video_driver_pix_fmt);
+
    command_event(CMD_EVENT_SHADER_DIR_INIT, NULL);
 
    if (av_info)
@@ -685,7 +687,7 @@ static bool init_video(void)
    {
       if(settings->video.window_x || settings->video.window_y)
       {
-         width = settings->video.window_x;
+         width  = settings->video.window_x;
          height = settings->video.window_y;
       }
       else
@@ -718,20 +720,22 @@ static bool init_video(void)
       goto error;
    }
 
-   video.width        = width;
-   video.height       = height;
-   video.fullscreen   = settings->video.fullscreen;
-   video.vsync        = settings->video.vsync && !runloop_ctl(RUNLOOP_CTL_IS_NONBLOCK_FORCED, NULL);
-   video.force_aspect = settings->video.force_aspect;
+   video.width         = width;
+   video.height        = height;
+   video.fullscreen    = settings->video.fullscreen;
+   video.vsync         = settings->video.vsync && !runloop_ctl(RUNLOOP_CTL_IS_NONBLOCK_FORCED, NULL);
+   video.force_aspect  = settings->video.force_aspect;
 #ifdef GEKKO
-   video.viwidth      = settings->video.viwidth;
-   video.vfilter      = settings->video.vfilter;
+   video.viwidth       = settings->video.viwidth;
+   video.vfilter       = settings->video.vfilter;
 #endif
-   video.smooth       = settings->video.smooth;
-   video.input_scale  = scale;
-   video.rgb32        = video_driver_state_filter ?
+   video.smooth        = settings->video.smooth;
+   video.input_scale   = scale;
+   video.rgb32         = video_driver_state_filter ?
       video_driver_state_out_rgb32 :
       (video_driver_pix_fmt == RETRO_PIXEL_FORMAT_XRGB8888);
+   video.swap_interval = settings->video.swap_interval;
+   video.font_enable   = settings->video.font_enable;
 
    /* Reset video frame count */
    video_driver_frame_count = 0;
@@ -976,11 +980,10 @@ bool video_monitor_fps_statistics(double *refresh_rate,
 {
    unsigned i;
    retro_time_t accum   = 0, avg, accum_var = 0;
-   settings_t *settings = config_get_ptr();
    unsigned samples      = MIN(MEASURE_FRAME_TIME_SAMPLES_COUNT,
          video_driver_frame_time_count);
 
-   if (settings->video.threaded || (samples < 2))
+   if (video_driver_is_threaded() || (samples < 2))
       return false;
 
    /* Measure statistics on frame time (microsecs), *not* FPS. */
@@ -1023,7 +1026,9 @@ bool video_monitor_fps_statistics(double *refresh_rate,
  * otherwise false.
  *
  **/
-bool video_monitor_get_fps(char *buf, size_t size,
+bool video_monitor_get_fps(
+      video_frame_info_t video_info,
+      char *buf, size_t size,
       char *buf_fps, size_t size_fps)
 {
    static retro_time_t curr_time;
@@ -1036,7 +1041,6 @@ bool video_monitor_get_fps(char *buf, size_t size,
    {
       static float last_fps;
       bool ret             = false;
-      settings_t *settings = config_get_ptr();
       unsigned write_index = video_driver_frame_time_count++ &
          (MEASURE_FRAME_TIME_SAMPLES_COUNT - 1);
 
@@ -1055,7 +1059,7 @@ bool video_monitor_get_fps(char *buf, size_t size,
                " || ",
                size);
 
-         if (settings->fps_show)
+         if (video_info.fps_show)
          {
             char fps_text[64];
             snprintf(fps_text, sizeof(fps_text), " FPS: %6.1f || ", last_fps);
@@ -1071,7 +1075,7 @@ bool video_monitor_get_fps(char *buf, size_t size,
          ret = true;
       }
 
-      if (buf_fps && settings->fps_show)
+      if (buf_fps && video_info.fps_show)
          snprintf(buf_fps, size_fps, "FPS: %6.1f || %s: " STRING_REP_UINT64,
                last_fps,
                msg_hash_to_str(MSG_FRAMES),
@@ -1098,14 +1102,15 @@ void video_driver_set_aspect_ratio_value(float value)
    video_driver_aspect_ratio = value;
 }
 
-static bool video_driver_frame_filter(const void *data,
+static bool video_driver_frame_filter(
+      const void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       size_t pitch,
       unsigned *output_width, unsigned *output_height,
       unsigned *output_pitch)
 {
    static struct retro_perf_counter softfilter_process = {0};
-   settings_t *settings = config_get_ptr();
    
    performance_counter_init(&softfilter_process, "softfilter_process");
 
@@ -1120,7 +1125,7 @@ static bool video_driver_frame_filter(const void *data,
          data, width, height, pitch);
    performance_counter_stop(&softfilter_process);
 
-   if (settings->video.post_filter_record && recording_data)
+   if (video_info.post_filter_record && recording_data)
       recording_dump_frame(video_driver_state_buffer,
             *output_width, *output_height, *output_pitch);
 
@@ -1503,7 +1508,6 @@ void video_driver_set_rgba(void)
 {
    video_driver_lock();
    video_driver_use_rgba = true;
-   image_texture_set_rgba();
    video_driver_unlock();
 }
 
@@ -1511,7 +1515,6 @@ void video_driver_unset_rgba(void)
 {
    video_driver_lock();
    video_driver_use_rgba = false;
-   image_texture_unset_rgba();
    video_driver_unlock();
 }
 
@@ -2048,12 +2051,12 @@ void video_driver_frame(const void *data, unsigned width,
       unsigned height, size_t pitch)
 {
    static char video_driver_msg[256];
+   video_frame_info_t video_info;
    static struct retro_perf_counter video_frame_conv = {0};
-   unsigned output_width  = 0;
-   unsigned output_height = 0;
-   unsigned  output_pitch = 0;
-   const char *msg        = NULL;
-   settings_t *settings   = config_get_ptr();
+   unsigned output_width                             = 0;
+   unsigned output_height                            = 0;
+   unsigned  output_pitch                            = 0;
+   const char *msg                                   = NULL;
 
    if (!video_driver_active)
       return;
@@ -2077,6 +2080,8 @@ void video_driver_frame(const void *data, unsigned width,
 
    video_driver_cached_frame_set(data, width, height, pitch);
 
+   video_driver_build_info(&video_info);
+
    /* Slightly messy code,
     * but we really need to do processing before blocking on VSync
     * for best possible scheduling.
@@ -2084,7 +2089,7 @@ void video_driver_frame(const void *data, unsigned width,
    if (
          (
              !video_driver_state_filter
-          || !settings->video.post_filter_record 
+          || !video_info.post_filter_record 
           || !data
           || video_driver_record_gpu_buffer
          ) && recording_data
@@ -2092,7 +2097,7 @@ void video_driver_frame(const void *data, unsigned width,
       recording_dump_frame(data, width, height, pitch);
 
    if (data && video_driver_state_filter &&
-         video_driver_frame_filter(data, width, height, pitch,
+         video_driver_frame_filter(data, video_info, width, height, pitch,
             &output_width, &output_height, &output_pitch))
    {
       data   = video_driver_state_buffer;
@@ -2103,13 +2108,14 @@ void video_driver_frame(const void *data, unsigned width,
 
    video_driver_msg[0] = '\0';
 
-   if (runloop_ctl(RUNLOOP_CTL_MSG_QUEUE_PULL, &msg) && msg)
+   if (runloop_ctl(RUNLOOP_CTL_MSG_QUEUE_PULL, &msg) 
+         && video_info.font_enable && msg)
       strlcpy(video_driver_msg, msg, sizeof(video_driver_msg));
 
    if (!current_video || !current_video->frame(
             video_driver_data, data, width, height,
             video_driver_frame_count,
-            pitch, video_driver_msg))
+            pitch, video_driver_msg, video_info))
       video_driver_active = false;
 
    video_driver_frame_count++;
@@ -2167,6 +2173,25 @@ bool video_driver_texture_unload(uintptr_t *id)
    video_driver_poke->unload_texture(video_driver_data, *id);
    *id = 0;
    return true;
+}
+
+void video_driver_build_info(video_frame_info_t *video_info)
+{
+   settings_t *settings             = config_get_ptr();
+   video_info->refresh_rate          = settings->video.refresh_rate;
+   video_info->black_frame_insertion = 
+      settings->video.black_frame_insertion;
+   video_info->hard_sync             = settings->video.hard_sync;
+   video_info->hard_sync_frames      = settings->video.hard_sync_frames;
+   video_info->fps_show              = settings->fps_show;
+   video_info->scale_integer         = settings->video.scale_integer;
+   video_info->aspect_ratio_idx      = settings->video.aspect_ratio_idx;
+   video_info->post_filter_record    = settings->video.post_filter_record;
+   video_info->max_swapchain_images  = settings->video.max_swapchain_images;
+   video_info->windowed_fullscreen   = settings->video.windowed_fullscreen;
+   video_info->monitor_index         = settings->video.monitor_index;
+   video_info->shared_context        = settings->video.shared_context;
+   video_info->font_enable           = settings->video.font_enable;
 }
 
 /**

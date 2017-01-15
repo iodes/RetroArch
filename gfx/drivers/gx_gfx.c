@@ -692,12 +692,13 @@ static void gx_efb_screenshot(void)
 static void *gx_init(const video_info_t *video,
       const input_driver_t **input, void **input_data)
 {
-   void *gxinput  = NULL;
-   gx_video_t *gx = (gx_video_t*)calloc(1, sizeof(gx_video_t));
+   settings_t *settings = config_get_ptr();
+   void *gxinput        = NULL;
+   gx_video_t *gx       = (gx_video_t*)calloc(1, sizeof(gx_video_t));
    if (!gx)
       return NULL;
 
-   gxinput     = input_gx.init();
+   gxinput     = input_gx.init(settings->input.joypad_driver);
    *input      = gxinput ? &input_gx : NULL;
    *input_data = gxinput;
 
@@ -1436,14 +1437,14 @@ static void gx_free(void *data)
 static bool gx_frame(void *data, const void *frame,
       unsigned width, unsigned height,
       uint64_t frame_count, unsigned pitch,
-      const char *msg)
+      const char *msg,
+      video_frame_info_t video_info)
 {
    char fps_txt[128];
    char fps_text_buf[128];
    static struct retro_perf_counter gx_frame = {0};
    gx_video_t *gx                     = (gx_video_t*)data;
    u8                       clear_efb = GX_FALSE;
-   settings_t               *settings = config_get_ptr();
 
    fps_txt[0] = fps_text_buf[0]       = '\0';
 
@@ -1537,10 +1538,10 @@ static bool gx_frame(void *data, const void *frame,
 
    GX_DrawDone();
 
-   video_monitor_get_fps(fps_txt, sizeof(fps_txt),
+   video_monitor_get_fps(video_info, fps_txt, sizeof(fps_txt),
          fps_text_buf, sizeof(fps_text_buf));
 
-   if (settings->fps_show)
+   if (video_info.fps_show)
    {
       char mem1_txt[128];
       char mem2_txt[128];

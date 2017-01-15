@@ -19,8 +19,6 @@
 
 #include "../../tasks/tasks_internal.h"
 
-#include "../../configuration.h"
-
 static uint64_t pad_state[MAX_PADS];
 static int16_t analog_state[MAX_PADS][2][2];
 static uint64_t pads_connected[MAX_PADS];
@@ -42,18 +40,15 @@ static const char *ps3_joypad_name(unsigned pad)
 
 static void ps3_joypad_autodetect_add(unsigned autoconf_pad)
 {
-   autoconfig_params_t params;
-
-   /* TODO - implement VID/PID? */
-   params.idx             = autoconf_pad;
-   params.display_name[0] = '\0';
-   params.vid             = 0;
-   params.pid             = 0;
-
-   strlcpy(params.name,   ps3_joypad_name(autoconf_pad), sizeof(params.name));
-   strlcpy(params.driver, ps3_joypad.ident, sizeof(params.driver));
-
-   input_autoconfigure_connect(&params);
+   if (!input_autoconfigure_connect(
+            ps3_joypad_name(autoconf_pad),
+            NULL,
+            ps3_joypad.ident,
+            autoconf_pad,
+            0,
+            0
+            ))
+      input_config_set_device_name(autoconf_pad, ps3_joypad_name(autoconf_pad));
 }
 
 static bool ps3_joypad_init(void *data)

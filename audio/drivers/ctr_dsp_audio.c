@@ -18,7 +18,6 @@
 #include <malloc.h>
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 #include "../../performance_counters.h"
 #include "../../runloop.h"
 #include "../../ctr/ctr_debug.h"
@@ -38,10 +37,11 @@ typedef struct
 #define CTR_DSP_AUDIO_SIZE        (CTR_DSP_AUDIO_COUNT * sizeof(int16_t) * 2)
 #define CTR_DSP_AUDIO_SIZE_MASK   (CTR_DSP_AUDIO_SIZE  - 1u)
 
-static void *ctr_dsp_audio_init(const char *device, unsigned rate, unsigned latency)
+static void *ctr_dsp_audio_init(const char *device, unsigned rate, unsigned latency,
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    ctr_dsp_audio_t *ctr = NULL;
-   settings_t *settings = config_get_ptr();
 
    (void)device;
    (void)rate;
@@ -55,7 +55,7 @@ static void *ctr_dsp_audio_init(const char *device, unsigned rate, unsigned late
    if (!ctr)
       return NULL;
 
-   settings->audio.out_rate  = 32730;
+   *new_rate    = 32730;
 
    ctr->channel = 0;
 

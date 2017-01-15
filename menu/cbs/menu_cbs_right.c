@@ -43,18 +43,16 @@
 
 #ifndef BIND_ACTION_RIGHT
 #define BIND_ACTION_RIGHT(cbs, name) \
-   cbs->action_right = name; \
-   cbs->action_right_ident = #name;
+   do { \
+      cbs->action_right = name; \
+      cbs->action_right_ident = #name; \
+   } while(0)
 #endif
 
 #ifdef HAVE_SHADER_MANAGER
-static int generic_shader_action_parameter_right(
-      struct video_shader *shader, struct video_shader_parameter *param,
+static int generic_shader_action_parameter_right(struct video_shader_parameter *param,
       unsigned type, const char *label, bool wraparound)
 {
-   if (!shader)
-      return menu_cbs_exit();
-
    param->current += param->step;
    param->current  = MIN(MAX(param->minimum, param->current), param->maximum);
 
@@ -71,22 +69,19 @@ int shader_action_parameter_right(unsigned type, const char *label, bool wraparo
    video_shader_driver_get_current_shader(&shader_info);
 
    param = &shader_info.data->parameters[type - MENU_SETTINGS_SHADER_PARAMETER_0];
-   return generic_shader_action_parameter_right(shader_info.data, param, type, label, wraparound);
+   if (!param)
+      return menu_cbs_exit();
+   return generic_shader_action_parameter_right(param, type, label, wraparound);
 }
 
 int shader_action_parameter_preset_right(unsigned type, const char *label,
       bool wraparound)
 {
-   struct video_shader_parameter *param = NULL;
-   struct video_shader      *shader     = NULL;
-
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-
-   param = shader ? 
-      &shader->parameters[type - MENU_SETTINGS_SHADER_PRESET_PARAMETER_0] :
-      NULL;
-   return generic_shader_action_parameter_right(shader, param, type, label, wraparound);
+   struct video_shader_parameter *param = menu_shader_manager_get_parameters(
+         type - MENU_SETTINGS_SHADER_PRESET_PARAMETER_0);
+   if (!param)
+      return menu_cbs_exit();
+   return generic_shader_action_parameter_right(param, type, label, wraparound);
 }
 #endif
 
@@ -231,27 +226,20 @@ static int action_right_shader_scale_pass(unsigned type, const char *label,
       bool wraparound)
 {
 #ifdef HAVE_SHADER_MANAGER
-   unsigned pass = type - MENU_SETTINGS_SHADER_PASS_SCALE_0;
-   struct video_shader *shader           = NULL;
-   struct video_shader_pass *shader_pass = NULL;
+   unsigned current_scale, delta;
+   unsigned pass                         = 
+      type - MENU_SETTINGS_SHADER_PASS_SCALE_0;
+   struct video_shader_pass *shader_pass = menu_shader_manager_get_pass(pass);
 
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
-      return menu_cbs_exit();
-   shader_pass = &shader->pass[pass];
    if (!shader_pass)
       return menu_cbs_exit();
 
-   {
-      unsigned current_scale   = shader_pass->fbo.scale_x;
-      unsigned delta           = 1;
-      current_scale            = (current_scale + delta) % 6;
+   current_scale            = shader_pass->fbo.scale_x;
+   delta                    = 1;
+   current_scale            = (current_scale + delta) % 6;
 
-      shader_pass->fbo.valid   = current_scale;
-      shader_pass->fbo.scale_x = shader_pass->fbo.scale_y = current_scale;
-
-   }
+   shader_pass->fbo.valid   = current_scale;
+   shader_pass->fbo.scale_x = shader_pass->fbo.scale_y = current_scale;
 #endif
    return 0;
 }
@@ -262,14 +250,8 @@ static int action_right_shader_filter_pass(unsigned type, const char *label,
 #ifdef HAVE_SHADER_MANAGER
    unsigned pass                         = type - MENU_SETTINGS_SHADER_PASS_FILTER_0;
    unsigned delta                        = 1;
-   struct video_shader *shader           = NULL;
-   struct video_shader_pass *shader_pass = NULL;
+   struct video_shader_pass *shader_pass = menu_shader_manager_get_pass(pass);
 
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-   if (!shader)
-      return menu_cbs_exit();
-   shader_pass = &shader->pass[pass];
    if (!shader_pass)
       return menu_cbs_exit();
 
@@ -311,16 +293,15 @@ static int action_right_shader_num_passes(unsigned type, const char *label,
       bool wraparound)
 {
 #ifdef HAVE_SHADER_MANAGER
-   bool refresh      = false;
-   struct video_shader *shader = NULL;
+   bool refresh                = false;
+   struct video_shader *shader = menu_shader_get();
 
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
    if (!shader)
       return menu_cbs_exit();
 
-   if ((shader->passes < GFX_MAX_SHADERS))
-      shader->passes++;
+   if ((menu_shader_manager_get_amount_passes() < GFX_MAX_SHADERS))
+      menu_shader_manager_increment_amount_passes();
+
    menu_entries_ctl(MENU_ENTRIES_CTL_SET_REFRESH, &refresh);
    menu_driver_ctl(RARCH_MENU_CTL_SET_PREVENT_POPULATE, NULL);
    video_shader_resolve_parameters(NULL, shader);
@@ -585,9 +566,15 @@ static int menu_cbs_init_bind_right_compare_label(menu_file_list_cbs_t *cbs,
             case MENU_ENUM_LABEL_SCREEN_RESOLUTION:
                BIND_ACTION_RIGHT(cbs, action_right_video_resolution);
                break;
+            case MENU_ENUM_LABEL_OPEN_ARCHIVE_DETECT_CORE:
+            case MENU_ENUM_LABEL_LOAD_ARCHIVE_DETECT_CORE:
+               BIND_ACTION_RIGHT(cbs, action_right_scroll);
+               break;
             case MENU_ENUM_LABEL_NO_ITEMS:
             case MENU_ENUM_LABEL_NO_PLAYLIST_ENTRIES_AVAILABLE:
-               if (  string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_MAIN_MENU))       ||
+               if (  
+                     string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_HISTORY_TAB))   ||
+                     string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_MAIN_MENU))       ||
                      string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_PLAYLISTS_TAB))   ||
                      string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_MUSIC_TAB)) ||
                      string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_IMAGES_TAB)) ||
@@ -596,8 +583,12 @@ static int menu_cbs_init_bind_right_compare_label(menu_file_list_cbs_t *cbs,
                   )
                {
                   BIND_ACTION_RIGHT(cbs, action_right_mainmenu);
-                  break;
                }
+               else
+               {
+                  BIND_ACTION_RIGHT(cbs, action_right_scroll);
+               }
+               break;
             case MENU_ENUM_LABEL_START_VIDEO_PROCESSOR:
             case MENU_ENUM_LABEL_TAKE_SCREENSHOT:
                if (  string_is_equal(menu_label, msg_hash_to_str(MENU_ENUM_LABEL_HISTORY_TAB))   ||

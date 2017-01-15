@@ -21,7 +21,6 @@
 #include <wiiuse/wpad.h>
 #endif
 
-#include "../../configuration.h"
 #include "../../tasks/tasks_internal.h"
 
 #ifdef GEKKO
@@ -144,16 +143,15 @@ static void handle_hotplug(unsigned port, uint32_t ptype)
 
    if (ptype != WPAD_EXP_NOCONTROLLER)
    {
-      autoconfig_params_t params;
-
-      /* TODO - implement VID/PID? */
-      params.idx             = port;
-      params.vid             = 0;
-      params.pid             = 0;
-      params.display_name[0] = '\0';
-      strlcpy(params.name, gx_joypad_name(port), sizeof(params.name));
-      strlcpy(params.driver, gx_joypad.ident, sizeof(params.driver));
-      input_autoconfigure_connect(&params);
+      if (!input_autoconfigure_connect(
+            gx_joypad_name(port),
+            NULL,
+            gx_joypad.ident,
+            port,
+            0,
+            0
+            ))
+         input_config_set_device_name(port, gx_joypad_name(port));
    }
 }
 

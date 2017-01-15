@@ -25,7 +25,6 @@
 #include <string/stdstring.h>
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 #define TRY_ALSA(x) if (x < 0) { \
@@ -156,7 +155,9 @@ static void alsa_thread_free(void *data)
 }
 
 static void *alsa_thread_init(const char *device,
-      unsigned rate, unsigned latency)
+      unsigned rate, unsigned latency,
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    snd_pcm_uframes_t buffer_size;
    snd_pcm_format_t format;

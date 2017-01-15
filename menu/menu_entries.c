@@ -341,20 +341,31 @@ void menu_entries_append(file_list_t *list, const char *path, const char *label,
 {
    menu_ctx_list_t list_info;
    size_t idx;
+   const char *menu_path           = NULL;
    menu_file_list_cbs_t *cbs       = NULL;
    if (!list || !label)
       return;
 
    file_list_append(list, path, label, type, directory_ptr, entry_idx);
 
-   idx              = list->size - 1;
+   menu_entries_get_last_stack(&menu_path, NULL, NULL, NULL, NULL);
 
-   list_info.list   = list;
-   list_info.path   = path;
-   list_info.label  = label;
-   list_info.idx    = idx;
+   idx                = list->size - 1;
+
+   list_info.list     = list;
+   list_info.path     = path;
+   list_info.fullpath = NULL;
+
+   if (!string_is_empty(menu_path))
+      list_info.fullpath = strdup(menu_path);
+
+   list_info.label    = label;
+   list_info.idx      = idx;
 
    menu_driver_ctl(RARCH_MENU_CTL_LIST_INSERT, &list_info);
+
+   if (list_info.fullpath)
+      free(list_info.fullpath);
 
    file_list_free_actiondata(list, idx);
    cbs = (menu_file_list_cbs_t*)
@@ -377,20 +388,30 @@ void menu_entries_append_enum(file_list_t *list, const char *path, const char *l
 {
    menu_ctx_list_t list_info;
    size_t idx;
+   const char *menu_path           = NULL;
    menu_file_list_cbs_t *cbs       = NULL;
    if (!list || !label)
       return;
 
    file_list_append(list, path, label, type, directory_ptr, entry_idx);
 
-   idx              = list->size - 1;
+   menu_entries_get_last_stack(&menu_path, NULL, NULL, NULL, NULL);
 
-   list_info.list   = list;
-   list_info.path   = path;
-   list_info.label  = label;
-   list_info.idx    = idx;
+   idx                   = list->size - 1;
+
+   list_info.fullpath    = NULL;
+
+   if (!string_is_empty(menu_path))
+      list_info.fullpath = strdup(menu_path);
+   list_info.list        = list;
+   list_info.path        = path;
+   list_info.label       = label;
+   list_info.idx         = idx;
 
    menu_driver_ctl(RARCH_MENU_CTL_LIST_INSERT, &list_info);
+
+   if (list_info.fullpath)
+      free(list_info.fullpath);
 
    file_list_free_actiondata(list, idx);
    cbs = (menu_file_list_cbs_t*)
@@ -413,20 +434,30 @@ void menu_entries_prepend(file_list_t *list, const char *path, const char *label
 {
    menu_ctx_list_t list_info;
    size_t idx;
+   const char *menu_path           = NULL;
    menu_file_list_cbs_t *cbs       = NULL;
    if (!list || !label)
       return;
 
    file_list_prepend(list, path, label, type, directory_ptr, entry_idx);
 
+   menu_entries_get_last_stack(&menu_path, NULL, NULL, NULL, NULL);
+
    idx              = 0;
 
-   list_info.list   = list;
-   list_info.path   = path;
-   list_info.label  = label;
-   list_info.idx    = idx;
+   list_info.fullpath    = NULL;
+
+   if (!string_is_empty(menu_path))
+      list_info.fullpath = strdup(menu_path);
+   list_info.list        = list;
+   list_info.path        = path;
+   list_info.label       = label;
+   list_info.idx         = idx;
 
    menu_driver_ctl(RARCH_MENU_CTL_LIST_INSERT, &list_info);
+
+   if (list_info.fullpath)
+      free(list_info.fullpath);
 
    file_list_free_actiondata(list, idx);
    cbs = (menu_file_list_cbs_t*)

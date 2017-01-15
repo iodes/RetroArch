@@ -960,7 +960,7 @@ static void zarch_frame(void *data)
    menu_display_blend_begin();
    draw.x              = 0;
    draw.y              = 0;
-   menu_display_draw_bg(&draw);
+   menu_display_draw_bg(&draw, false);
    menu_display_draw(&draw);
    menu_display_blend_end();
 
@@ -1080,7 +1080,6 @@ static void zarch_context_reset(void *data)
    zarch_context_bg_destroy(zui);
 
    task_push_image_load(settings->path.menu_wallpaper,
-         MENU_ENUM_LABEL_CB_MENU_WALLPAPER,
          menu_display_handle_wallpaper_upload, NULL);
 
    menu_display_allocate_white_texture();

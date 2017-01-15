@@ -21,7 +21,6 @@
 #include <compat/strl.h>
 
 #include <retro_common_api.h>
-
 #include <libretro.h>
 
 RETRO_BEGIN_DECLS
@@ -35,17 +34,9 @@ RETRO_BEGIN_DECLS
  */
 unsigned menu_event(uint64_t input, uint64_t trigger_state);
 
-void menu_event_keyboard_set(bool down, enum retro_key key);
+void menu_event_kb_set(bool down, enum retro_key key);
 
-unsigned char menu_event_keyboard_is_set(enum retro_key key);
-
-int menu_event_get_osk_ptr(void);
-
-void menu_event_set_osk_ptr(int a);
-
-void menu_event_osk_append(int a);
-
-const char** menu_event_get_osk_grid(void);
+unsigned char menu_event_kb_is_set(enum retro_key key);
 
 RETRO_END_DECLS
 

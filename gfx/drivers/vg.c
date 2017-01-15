@@ -125,7 +125,6 @@ static void *vg_init(const video_info_t *video,
    interval = video->vsync ? 1 : 0;
 
    video_context_driver_swap_interval(&interval);
-   video_context_driver_update_window_title();
 
    vg->mTexType    = video->rgb32 ? VG_sXRGB_8888 : VG_sRGB_565;
    vg->keep_aspect = video->force_aspect;
@@ -192,7 +191,7 @@ static void *vg_init(const video_info_t *video,
 
    video_context_driver_input_driver(&inp);
 
-   if (     settings->video.font_enable
+   if (     video->font_enable
          && font_renderer_create_default((const void**)&vg->font_driver, &vg->mFontRenderer,
             *settings->path.font ? settings->path.font : NULL, settings->video.font_size))
    {
@@ -378,7 +377,8 @@ static void vg_copy_frame(void *data, const void *frame,
 
 static bool vg_frame(void *data, const void *frame,
       unsigned frame_width, unsigned frame_height,
-      uint64_t frame_count, unsigned pitch, const char *msg)
+      uint64_t frame_count, unsigned pitch, const char *msg,
+      video_frame_info_t video_info)
 {
    unsigned width, height;
    vg_t                           *vg = (vg_t*)data;
@@ -424,11 +424,11 @@ static bool vg_frame(void *data, const void *frame,
       vg_draw_message(vg, msg);
 #endif
 
-   video_context_driver_update_window_title();
+   video_context_driver_update_window_title(video_info);
 
    performance_counter_stop(&vg_fr);
 
-   video_context_driver_swap_buffers();
+   video_context_driver_swap_buffers(video_info);
 
    return true;
 }

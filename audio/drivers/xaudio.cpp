@@ -32,7 +32,6 @@
 #include "xaudio.h"
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 typedef struct xaudio2 xaudio2_t;
@@ -235,11 +234,13 @@ static size_t xaudio2_write(xaudio2_t *handle, const void *buf, size_t bytes_)
    return bytes_;
 }
 
-static void *xa_init(const char *device, unsigned rate, unsigned latency)
+static void *xa_init(const char *device, unsigned rate, unsigned latency,
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    size_t bufsize;
    unsigned device_index = 0;
-   xa_t *xa = (xa_t*)calloc(1, sizeof(*xa));
+   xa_t *xa              = (xa_t*)calloc(1, sizeof(*xa));
    if (!xa)
       return NULL;
 

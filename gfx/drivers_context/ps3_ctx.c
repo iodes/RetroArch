@@ -16,6 +16,10 @@
 
 #include <stdint.h>
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #ifndef __PSL1GHT__
 #include <sys/spu_initialize.h>
 #endif
@@ -26,14 +30,11 @@
 #endif
 #endif
 
+#include "../../configuration.h"
 #include "../../runloop.h"
 #include "../../defines/ps3_defines.h"
 #include "../common/gl_common.h"
 #include "../video_context_driver.h"
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 
 typedef struct gfx_ctx_ps3_data
 {
@@ -178,7 +179,7 @@ static bool gfx_ctx_ps3_has_windowed(void *data)
    return false;
 }
 
-static void gfx_ctx_ps3_swap_buffers(void *data)
+static void gfx_ctx_ps3_swap_buffers(void *data, video_frame_info_t video_info)
 {
    (void)data;
 #ifdef HAVE_LIBDBGFONT
@@ -198,19 +199,18 @@ static bool gfx_ctx_ps3_set_resize(void *data,
    return false;
 }
 
-static void gfx_ctx_ps3_update_window_title(void *data)
+static void gfx_ctx_ps3_update_window_title(void *data, video_frame_info_t video_info)
 {
    char buf[128];
    char buf_fps[128];
-   settings_t *settings = config_get_ptr();
 
    buf[0] = buf_fps[0]  = '\0';
 
    (void)data;
 
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
@@ -225,7 +225,7 @@ static void gfx_ctx_ps3_get_video_size(void *data,
 #endif
 }
 
-static void *gfx_ctx_ps3_init(void *video_driver)
+static void *gfx_ctx_ps3_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_PSGL
    PSGLdeviceParameters params;
@@ -302,6 +302,7 @@ static void *gfx_ctx_ps3_init(void *video_driver)
 }
 
 static bool gfx_ctx_ps3_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -340,10 +341,11 @@ static void gfx_ctx_ps3_destroy(void *data)
 static void gfx_ctx_ps3_input_driver(void *data,
       const input_driver_t **input, void **input_data)
 {
-   void *ps3input = input_ps3.init();
+   settings_t *settings = config_get_ptr();
+   void *ps3input       = input_ps3.init(settings->input.joypad_driver);
 
-   *input = ps3input ? &input_ps3 : NULL;
-   *input_data = ps3input;
+   *input               = ps3input ? &input_ps3 : NULL;
+   *input_data          = ps3input;
 }
 
 static bool gfx_ctx_ps3_bind_api(void *data,

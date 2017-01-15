@@ -20,6 +20,7 @@
 
 #include <boolean.h>
 #include <retro_common_api.h>
+#include <retro_miscellaneous.h>
 
 #include <queues/message_queue.h>
 #include <queues/task_queue.h>
@@ -54,10 +55,17 @@ enum content_mode_load
 
 enum nbio_status_enum
 {
-   NBIO_STATUS_POLL = 0,
+   NBIO_STATUS_INIT = 0,
+   NBIO_STATUS_POLL,
    NBIO_STATUS_TRANSFER,
    NBIO_STATUS_TRANSFER_PARSE,
    NBIO_STATUS_TRANSFER_PARSE_FREE
+};
+
+enum nbio_status_flags
+{
+   NBIO_FLAG_NONE = 0,
+   NBIO_FLAG_IMAGE_SUPPORTS_RGBA
 };
 
 typedef struct nbio_handle
@@ -70,17 +78,9 @@ typedef struct nbio_handle
    unsigned pos_increment;
    msg_queue_t *msg_queue;
    unsigned status;
+   uint32_t status_flags;
+   char path[4096];
 } nbio_handle_t;
-
-typedef struct autoconfig_params
-{
-   char  name[255];
-   char  driver[255];
-   char  display_name[255];
-   unsigned idx;
-   int32_t vid;
-   int32_t pid;
-} autoconfig_params_t;
 
 #ifdef HAVE_NETWORKING
 typedef struct
@@ -101,7 +101,6 @@ bool task_push_netplay_lan_scan(void);
 #endif
 
 bool task_push_image_load(const char *fullpath,
-      enum msg_hash_enums enum_idx,
       retro_task_callback_t cb, void *userdata);
 
 #ifdef HAVE_LIBRETRODB
@@ -162,7 +161,13 @@ void *savefile_ptr_get(void);
 
 void path_init_savefile_new(void);
 
-bool input_autoconfigure_connect(autoconfig_params_t *params);
+bool input_autoconfigure_connect(
+      const char *name,
+      const char *display_name,
+      const char *driver,
+      unsigned idx,
+      unsigned vid,
+      unsigned pid);
 
 bool input_autoconfigure_disconnect(unsigned i, const char *ident);
 

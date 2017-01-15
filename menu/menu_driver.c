@@ -82,7 +82,6 @@ static bool menu_driver_pending_quit            = false;
 static bool menu_driver_pending_shutdown        = false;
 static bool menu_driver_is_binding              = false;
 static playlist_t *menu_driver_playlist         = NULL;
-static struct video_shader *menu_driver_shader  = NULL;
 static menu_handle_t *menu_driver_data          = NULL;
 static const menu_ctx_driver_t *menu_driver_ctx = NULL;
 static void *menu_userdata                      = NULL;
@@ -182,9 +181,6 @@ static bool menu_init(menu_handle_t *menu_data)
    if (!menu_entries_ctl(MENU_ENTRIES_CTL_INIT, NULL))
       return false;
 
-   if (!menu_driver_ctl(RARCH_MENU_CTL_SHADER_INIT, NULL))
-      return false;
-
    if (settings->menu_show_start_screen)
    {
       menu_dialog_push_pending(true, MENU_DIALOG_WELCOME);
@@ -213,7 +209,7 @@ static bool menu_init(menu_handle_t *menu_data)
 #endif
    }
 
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_MANAGER_INIT, NULL);
+   menu_shader_manager_init();
 
    if (!menu_display_init())
       return false;
@@ -232,7 +228,7 @@ static void menu_input_key_event(bool down, unsigned keycode,
    RARCH_LOG("down: %d, keycode: %d, mod: %d, character: %d\n", down, keycode, mod, character);
 #endif
 
-   menu_event_keyboard_set(down, (enum retro_key)keycode);
+   menu_event_kb_set(down, (enum retro_key)keycode);
 }
 
 static void menu_driver_toggle(bool on)
@@ -487,29 +483,6 @@ bool menu_driver_ctl(enum rarch_menu_ctl_state state, void *data)
 
          menu_driver_data->state               = 0;
          break;
-      case RARCH_MENU_CTL_SHADER_DEINIT:
-#ifdef HAVE_SHADER_MANAGER
-         if (menu_driver_shader)
-            free(menu_driver_shader);
-         menu_driver_shader = NULL;
-#endif
-         break;
-      case RARCH_MENU_CTL_SHADER_INIT:
-#ifdef HAVE_SHADER_MANAGER
-         menu_driver_shader = (struct video_shader*)
-            calloc(1, sizeof(struct video_shader));
-         if (!menu_driver_shader)
-            return false;
-#endif
-         break;
-      case RARCH_MENU_CTL_SHADER_GET:
-         {
-            struct video_shader **shader = (struct video_shader**)data;
-            if (!shader)
-               return false;
-            *shader = menu_driver_shader;
-         }
-         break;
       case RARCH_MENU_CTL_FRAME:
          if (!menu_driver_alive)
             return false;
@@ -555,7 +528,8 @@ bool menu_driver_ctl(enum rarch_menu_ctl_state state, void *data)
          if (menu_driver_ctl(RARCH_MENU_CTL_OWNS_DRIVER, NULL))
             return true;
          menu_driver_ctl(RARCH_MENU_CTL_PLAYLIST_FREE, NULL);
-         menu_driver_ctl(RARCH_MENU_CTL_SHADER_DEINIT, NULL);
+         menu_shader_manager_free();
+
          if (menu_driver_data)
          {
             menu_input_ctl(MENU_INPUT_CTL_DEINIT, NULL);
@@ -797,9 +771,6 @@ bool menu_driver_ctl(enum rarch_menu_ctl_state state, void *data)
             return false;
          menu_driver_ctx->context_destroy(menu_userdata);
          break;
-      case RARCH_MENU_CTL_SHADER_MANAGER_INIT:
-         menu_shader_manager_init();
-         break;
       case RARCH_MENU_CTL_LIST_SET_SELECTION:
          {
             file_list_t *list = (file_list_t*)data;
@@ -828,7 +799,8 @@ bool menu_driver_ctl(enum rarch_menu_ctl_state state, void *data)
             if (!list || !menu_driver_ctx || !menu_driver_ctx->list_insert)
                return false;
             menu_driver_ctx->list_insert(menu_userdata,
-                  list->list, list->path, list->label, list->idx);
+                  list->list, list->path, list->fullpath,
+                  list->label, list->idx);
          }
          break;
       case RARCH_MENU_CTL_LOAD_IMAGE:

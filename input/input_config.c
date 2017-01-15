@@ -280,7 +280,7 @@ static void parse_hat(struct retro_keybind *bind, const char *str)
       return;
    }
 
-   if (string_is_equal_noncase(dir, "up"))
+   if      (string_is_equal_noncase(dir, "up"))
       hat_dir = HAT_UP_MASK;
    else if (string_is_equal_noncase(dir, "down"))
       hat_dir = HAT_DOWN_MASK;
@@ -380,6 +380,7 @@ static void input_config_get_bind_string_joykey(char *buf, const char *prefix,
       const struct retro_keybind *bind, size_t size)
 {
    settings_t *settings = config_get_ptr();
+   bool label_show      = settings->input.input_descriptor_label_show;
 
    if (GET_HAT_DIR(bind->joykey))
    {
@@ -403,8 +404,7 @@ static void input_config_get_bind_string_joykey(char *buf, const char *prefix,
             break;
       }
 
-      if (!string_is_empty(bind->joykey_label) 
-            && settings->input.input_descriptor_label_show)
+      if (!string_is_empty(bind->joykey_label) && label_show)
          snprintf(buf, size, "%s %s ", prefix, bind->joykey_label);
       else
          snprintf(buf, size, "%sHat #%u %s (%s)", prefix,
@@ -413,8 +413,7 @@ static void input_config_get_bind_string_joykey(char *buf, const char *prefix,
    }
    else
    {
-      if (!string_is_empty(bind->joykey_label) 
-            && settings->input.input_descriptor_label_show)
+      if (!string_is_empty(bind->joykey_label) && label_show)
          snprintf(buf, size, "%s%s (btn) ", prefix, bind->joykey_label);
       else
          snprintf(buf, size, "%s%u (%s) ", prefix, (unsigned)bind->joykey,
@@ -475,6 +474,35 @@ void input_config_get_bind_string(char *buf, const struct retro_keybind *bind,
    snprintf(keybuf, sizeof(keybuf), msg_hash_to_str(MENU_ENUM_LABEL_VALUE_INPUT_KEY), key);
    strlcat(buf, keybuf, size);
 #endif
+}
+
+const char *input_config_get_device_name(unsigned port)
+{
+   settings_t *settings = config_get_ptr();
+   if (string_is_empty(settings->input.device_names[port]))
+      return NULL;
+   return settings->input.device_names[port];
+}
+
+void input_config_set_device_name(unsigned port, const char *name)
+{
+   settings_t *settings = config_get_ptr();
+   if (!string_is_empty(name))
+      strlcpy(settings->input.device_names[port],
+            name,
+            sizeof(settings->input.device_names[port]));
+}
+
+bool input_config_get_bind_idx(unsigned port, unsigned *joy_idx_real)
+{
+   settings_t *settings = config_get_ptr();
+   unsigned joy_idx     = settings->input.joypad_map[port];
+
+   if (joy_idx >= MAX_USERS)
+      return false;
+
+   *joy_idx_real        = joy_idx;
+   return true;
 }
 
 const struct retro_keybind *input_config_get_bind_auto(unsigned port, unsigned id)

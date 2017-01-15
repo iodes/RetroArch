@@ -57,7 +57,6 @@ void free_xkb(void)
 int init_xkb(int fd, size_t size)
 {
    char *map_str;
-   settings_t *settings = config_get_ptr();
    mod_map_idx          = (xkb_mod_index_t *)calloc(MOD_MAP_SIZE, sizeof(xkb_mod_index_t));
 
    if (!mod_map_idx)
@@ -77,13 +76,14 @@ int init_xkb(int fd, size_t size)
          if (map_str == MAP_FAILED)
             goto error;
 
-         xkb_map = xkb_keymap_new_from_string(xkb_ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, 0);
+         xkb_map = xkb_keymap_new_from_string(xkb_ctx, map_str, XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
          munmap(map_str, size);
       }
       else
       {
-         struct string_list *list = NULL;
+         struct string_list *list   = NULL;
          struct xkb_rule_names rule = {0};
+         settings_t *settings       = config_get_ptr();
 
          rule.rules = "evdev";
 

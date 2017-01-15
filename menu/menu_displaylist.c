@@ -52,6 +52,7 @@
 #include "menu_content.h"
 #include "menu_driver.h"
 #include "menu_navigation.h"
+#include "menu_shader.h"
 #include "widgets/menu_dialog.h"
 #include "widgets/menu_list.h"
 #include "widgets/menu_filebrowser.h"
@@ -1435,10 +1436,8 @@ static int menu_displaylist_parse_playlist(menu_displaylist_info_t *info,
       char fill_buf[PATH_MAX_LENGTH];
       char path_copy[PATH_MAX_LENGTH];
       const char *core_name           = NULL;
-      const char *db_name             = NULL;
       const char *path                = NULL;
       const char *label               = NULL;
-      const char *crc32               = NULL;
 
       fill_buf[0] = path_copy[0]      = '\0';
 
@@ -1447,7 +1446,7 @@ static int menu_displaylist_parse_playlist(menu_displaylist_info_t *info,
       path = path_copy;
 
       playlist_get_index(playlist, i,
-            &path, &label, NULL, &core_name, &crc32, &db_name);
+            &path, &label, NULL, &core_name, NULL, NULL);
 
       if (core_name)
          strlcpy(fill_buf, core_name, sizeof(fill_buf));
@@ -1496,13 +1495,7 @@ static int menu_displaylist_parse_playlist(menu_displaylist_info_t *info,
 static int menu_displaylist_parse_shader_options(menu_displaylist_info_t *info)
 {
    unsigned i;
-   struct video_shader *shader = NULL;
-
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_GET,
-         &shader);
-
-   if (!shader)
-      return -1;
+   unsigned pass_count = menu_shader_manager_get_amount_passes();
 
    menu_entries_append_enum(info->list,
          msg_hash_to_str(MENU_ENUM_LABEL_VALUE_SHADER_APPLY_CHANGES),
@@ -1545,7 +1538,7 @@ static int menu_displaylist_parse_shader_options(menu_displaylist_info_t *info)
          MENU_ENUM_LABEL_VIDEO_SHADER_NUM_PASSES,
          0, 0, 0);
 
-   for (i = 0; i < shader->passes; i++)
+   for (i = 0; i < pass_count; i++)
    {
       char buf_tmp[64];
       char buf[64];
@@ -2813,6 +2806,7 @@ static int menu_displaylist_parse_horizontal_content_actions(
       strlcat(db_path, file_path_str(FILE_PATH_RDB_EXTENSION),
             sizeof(db_path));
 
+      if (path_file_exists(db_path))
       menu_entries_append_enum(info->list, label,
             db_path,
             MENU_ENUM_LABEL_INFORMATION, FILE_TYPE_RDB_ENTRY, 0, idx);
@@ -3711,7 +3705,6 @@ static bool menu_displaylist_push_internal(
    }
    else if (string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_IMAGES_TAB)))
    {
-
       filebrowser_clear_type();
       info->type = 42;
       strlcpy(info->exts,
@@ -6171,7 +6164,8 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type, void *data)
          strlcpy(info->exts, "filt", sizeof(info->exts));
          break;
       case DISPLAYLIST_IMAGES:
-         filebrowser_clear_type();
+         if (filebrowser_get_type() != FILEBROWSER_SELECT_FILE)
+            filebrowser_clear_type();
          info->type_default = FILE_TYPE_IMAGE;
          {
             union string_list_elem_attr attr;

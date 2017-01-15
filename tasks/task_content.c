@@ -62,6 +62,7 @@
 
 #ifdef HAVE_MENU
 #include "../menu/menu_driver.h"
+#include "../menu/menu_shader.h"
 #endif
 
 #ifdef HAVE_CHEEVOS
@@ -279,7 +280,7 @@ static bool content_load(content_ctx_info_t *info)
    }
 
 #ifdef HAVE_MENU
-   menu_driver_ctl(RARCH_MENU_CTL_SHADER_MANAGER_INIT, NULL);
+   menu_shader_manager_init();
 #endif
    command_event(CMD_EVENT_HISTORY_INIT, NULL);
    command_event(CMD_EVENT_RESUME, NULL);
@@ -391,8 +392,6 @@ static bool load_content_from_compressed_archive(
       snprintf(str, sizeof(str), "%s \"%s\".\n",
             msg_hash_to_str(MSG_COULD_NOT_READ_CONTENT_FILE),
             path);
-      if (error_string)
-         free(error_string);
       *error_string = strdup(str);
       return false;
    }
@@ -586,8 +585,7 @@ static bool content_file_load(
    return true;
 
 error:
-   if (additional_path_allocs)
-      string_list_free(additional_path_allocs);
+   string_list_free(additional_path_allocs);
    
    return false;
 }
@@ -610,8 +608,6 @@ static const struct retro_subsystem_info *content_file_init_subsystem(
       snprintf(msg, sizeof(msg),
             "Failed to find subsystem \"%s\" in libretro implementation.\n",
             path_get(RARCH_PATH_SUBSYSTEM));
-      if (error_string)
-         free(error_string);
       *error_string = strdup(msg);
       goto error;
    }
@@ -621,8 +617,6 @@ static const struct retro_subsystem_info *content_file_init_subsystem(
       snprintf(msg, sizeof(msg),
             "%s\n",
             msg_hash_to_str(MSG_ERROR_LIBRETRO_CORE_REQUIRES_SPECIAL_CONTENT));
-      if (error_string)
-         free(error_string);
       *error_string = strdup(msg);
       goto error;
    }
@@ -633,8 +627,6 @@ static const struct retro_subsystem_info *content_file_init_subsystem(
             "subsystem \"%s\", but %u content files were provided.\n",
             special->num_roms, special->desc,
             (unsigned)subsystem->size);
-      if (error_string)
-         free(error_string);
       *error_string = strdup(msg);
       goto error;
    }
@@ -645,8 +637,6 @@ static const struct retro_subsystem_info *content_file_init_subsystem(
             "but %u content files were provided.\n",
             special->desc,
             (unsigned)subsystem->size);
-      if (error_string)
-         free(error_string);
       *error_string = strdup(msg);
       goto error;
    }
@@ -912,8 +902,6 @@ error:
          snprintf(msg, sizeof(msg), "%s %s.\n",
                msg_hash_to_str(MSG_FAILED_TO_LOAD),
                name);
-         if (error_string)
-            free(error_string);
          *error_string = strdup(msg);
       }
    }

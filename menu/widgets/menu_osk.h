@@ -14,34 +14,46 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __AUDIO_DSP_FILTER_H__
-#define __AUDIO_DSP_FILTER_H__
+#ifndef _MENU_WIDGETS_OSK_H
+#define _MENU_WIDGETS_OSK_H
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#include <boolean.h>
 
 #include <retro_common_api.h>
 
+#define OSK_CHARS_PER_LINE 11
+
 RETRO_BEGIN_DECLS
 
-typedef struct rarch_dsp_filter rarch_dsp_filter_t;
-
-rarch_dsp_filter_t *rarch_dsp_filter_new(const char *filter_config,
-      float sample_rate);
-
-void rarch_dsp_filter_free(rarch_dsp_filter_t *dsp);
-
-struct rarch_dsp_data
+enum osk_type
 {
-   float *input;
-   unsigned input_frames;
-
-   /* Set by rarch_dsp_filter_process(). */
-   float *output;
-   unsigned output_frames;
+   OSK_TYPE_UNKNOWN    = 0U,
+   OSK_LOWERCASE_LATIN,
+   OSK_UPPERCASE_LATIN,
+   OSK_HIRAGANA_PAGE1,
+   OSK_HIRAGANA_PAGE2,
+   OSK_KATAKANA_PAGE1,
+   OSK_KATAKANA_PAGE2,
+   OSK_TYPE_LAST
 };
 
-void rarch_dsp_filter_process(rarch_dsp_filter_t *dsp,
-      struct rarch_dsp_data *data);
+enum osk_type menu_event_get_osk_idx(void);
+
+void menu_event_set_osk_idx(enum osk_type idx);
+
+int menu_event_get_osk_ptr(void);
+
+void menu_event_set_osk_ptr(int a);
+
+void menu_event_osk_append(int a);
+
+void menu_event_osk_iterate(void);
+
+const char** menu_event_get_osk_grid(void);
 
 RETRO_END_DECLS
 
 #endif
-

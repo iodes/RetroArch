@@ -17,7 +17,6 @@
 #include "../../config.h"
 #endif
 
-#include "../../configuration.h"
 #include "../../runloop.h"
 #include "../../frontend/frontend_driver.h"
 #include "../common/vulkan_common.h"
@@ -53,7 +52,7 @@ static void gfx_ctx_khr_display_get_video_size(void *data,
    *height = khr->height;
 }
 
-static void *gfx_ctx_khr_display_init(void *video_driver)
+static void *gfx_ctx_khr_display_init(video_frame_info_t video_info, void *video_driver)
 {
    khr_display_ctx_data_t *khr = (khr_display_ctx_data_t*)calloc(1, sizeof(*khr));
    if (!khr)
@@ -111,23 +110,21 @@ static bool gfx_ctx_khr_display_set_resize(void *data,
    return false;
 }
 
-static void gfx_ctx_khr_display_update_window_title(void *data)
+static void gfx_ctx_khr_display_update_window_title(void *data, video_frame_info_t video_info)
 {
    char buf[128];
    char buf_fps[128];
-   settings_t *settings = config_get_ptr();
 
    buf[0] = buf_fps[0]  = '\0';
 
-   (void)data;
-
-   video_monitor_get_fps(buf, sizeof(buf),
+   video_monitor_get_fps(video_info, buf, sizeof(buf),
          buf_fps, sizeof(buf_fps));
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
 static bool gfx_ctx_khr_display_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -204,7 +201,7 @@ static void gfx_ctx_khr_display_set_swap_interval(void *data, unsigned swap_inte
    }
 }
 
-static void gfx_ctx_khr_display_swap_buffers(void *data)
+static void gfx_ctx_khr_display_swap_buffers(void *data, video_frame_info_t video_info)
 {
    khr_display_ctx_data_t *khr = (khr_display_ctx_data_t*)data;
    vulkan_present(&khr->vk, khr->vk.context.current_swapchain_index);

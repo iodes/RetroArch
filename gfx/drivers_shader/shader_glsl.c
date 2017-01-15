@@ -129,6 +129,7 @@ static const char *glsl_prefixes[] = {
 #include "../drivers/gl_shaders/legacy_pipeline_xmb_ribbon.glsl.vert.h"
 #include "../drivers/gl_shaders/modern_pipeline_xmb_ribbon.glsl.vert.h"
 #include "../drivers/gl_shaders/pipeline_xmb_ribbon.glsl.frag.h"
+#include "../drivers/gl_shaders/pipeline_bokeh.glsl.frag.h"
 #endif
 
 typedef struct glsl_shader_data
@@ -1001,6 +1002,21 @@ static void *gl_glsl_init(void *data, const char *path)
          &shader_prog_info);
    gl_glsl_find_uniforms(glsl, 0, glsl->prg[VIDEO_SHADER_MENU_4].id,
          &glsl->uniforms[VIDEO_SHADER_MENU_4]);
+
+#if defined(HAVE_OPENGLES)
+   shader_prog_info.vertex   = stock_vertex_xmb_snow_modern;
+#else
+   shader_prog_info.vertex   = glsl_core ? stock_vertex_xmb_snow_modern : stock_vertex_xmb_snow_legacy;
+#endif
+   shader_prog_info.fragment = stock_fragment_xmb_bokeh;
+
+   gl_glsl_compile_program(
+         glsl,
+         VIDEO_SHADER_MENU_5,
+         &glsl->prg[VIDEO_SHADER_MENU_5],
+         &shader_prog_info);
+   gl_glsl_find_uniforms(glsl, 0, glsl->prg[VIDEO_SHADER_MENU_5].id,
+         &glsl->uniforms[VIDEO_SHADER_MENU_5]);
 #endif
 
    gl_glsl_reset_attrib(glsl);

@@ -22,7 +22,6 @@
 #include <rthreads/rthreads.h>
 
 #include "../audio_driver.h"
-#include "../../configuration.h"
 
 /* Helper macros, COM-style. */
 #define SLObjectItf_Realize(a, ...) ((*(a))->Realize(a, __VA_ARGS__))
@@ -98,7 +97,9 @@ static void sl_free(void *data)
    free(sl);
 }
 
-static void *sl_init(const char *device, unsigned rate, unsigned latency)
+static void *sl_init(const char *device, unsigned rate, unsigned latency,
+      unsigned block_frames,
+      unsigned *new_rate)
 {
    unsigned i;
    SLDataFormat_PCM fmt_pcm                        = {0};
@@ -106,7 +107,6 @@ static void *sl_init(const char *device, unsigned rate, unsigned latency)
    SLDataSink audio_sink                           = {0};
    SLDataLocator_AndroidSimpleBufferQueue loc_bufq = {0};
    SLDataLocator_OutputMix loc_outmix              = {0};
-   settings_t *settings                            = config_get_ptr();
    SLresult res                                    = 0;
    SLInterfaceID                                id = SL_IID_ANDROIDSIMPLEBUFFERQUEUE;
    SLboolean                                req    = SL_BOOLEAN_TRUE;
@@ -125,8 +125,8 @@ static void *sl_init(const char *device, unsigned rate, unsigned latency)
    GOTO_IF_FAIL(SLEngineItf_CreateOutputMix(sl->engine, &sl->output_mix, 0, NULL, NULL));
    GOTO_IF_FAIL(SLObjectItf_Realize(sl->output_mix, SL_BOOLEAN_FALSE));
 
-   if (settings->audio.block_frames)
-      sl->buf_size  = settings->audio.block_frames * 4;
+   if (block_frames)
+      sl->buf_size  = block_frames * 4;
    else
       sl->buf_size  = next_pow2(32 * latency);
 

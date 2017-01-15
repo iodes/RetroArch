@@ -18,10 +18,13 @@
 #include <gccore.h>
 #include <rthreads/rthreads.h>
 
+#include "../input_config.h"
 #include "../input_defines.h"
-#include "../connect/joypad_connection.h"
-#include "../../tasks/tasks_internal.h"
 #include "../input_hid_driver.h"
+
+#include "../connect/joypad_connection.h"
+
+#include "../../tasks/tasks_internal.h"
 #include "../../verbosity.h"
 
 #define WIIUSB_SC_NONE     0
@@ -140,21 +143,14 @@ static void wiiusb_hid_device_add_autodetect(unsigned idx,
       const char *device_name, const char *driver_name,
       uint16_t dev_vid, uint16_t dev_pid)
 {
-   autoconfig_params_t params;
-
-   params.idx             = idx;
-   params.vid             = dev_vid;
-   params.pid             = dev_pid;
-   params.display_name[0] = '\0';
-   params.name[0]         = '\0';
-   params.driver[0]       = '\0';
-
-   if (!string_is_empty(device_name))
-      strlcpy(params.name,   device_name, sizeof(params.name));
-   if (!string_is_empty(driver_name))
-      strlcpy(params.driver, driver_name, sizeof(params.driver));
-
-   input_autoconfigure_connect(&params);
+   if (!input_autoconfigure_connect(
+         device_name,
+         NULL,
+         driver_name,
+         idx,
+         dev_vid,
+         dev_pid))
+      input_config_set_device_name(idx, device_name);
 }
 
 static void wiiusb_get_description(usb_device_entry *device,

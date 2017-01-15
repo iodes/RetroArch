@@ -138,10 +138,6 @@ ACHIEVEMENTS
 #include "../cheevos.c"
 #endif
 
-#if defined(HAVE_NETWORKING)
-#include "../libretro-common/net/net_http_parse.c"
-#endif
-
 /*============================================================
 MD5
 ============================================================ */
@@ -167,7 +163,7 @@ VIDEO CONTEXT
 #elif defined(ANDROID)
 #include "../gfx/drivers_context/android_ctx.c"
 #elif defined(__QNX__)
-#include "../gfx/drivers_context/bbqnx_ctx.c"
+#include "../gfx/drivers_context/qnx_ctx.c"
 #elif defined(EMSCRIPTEN)
 #include "../gfx/drivers_context/emscriptenegl_ctx.c"
 #elif defined(__APPLE__) && !defined(TARGET_IPHONE_SIMULATOR) && !defined(TARGET_OS_IPHONE)
@@ -688,22 +684,23 @@ FILTERS
 #include "../gfx/video_filters/lq2x.c"
 #include "../gfx/video_filters/phosphor2x.c"
 
-#include "../audio/audio_filters/echo.c"
-#include "../audio/audio_filters/eq.c"
-#include "../audio/audio_filters/chorus.c"
-#include "../audio/audio_filters/iir.c"
-#include "../audio/audio_filters/panning.c"
-#include "../audio/audio_filters/phaser.c"
-#include "../audio/audio_filters/reverb.c"
-#include "../audio/audio_filters/wahwah.c"
+#include "../libretro-common/audio/dsp_filters/echo.c"
+#include "../libretro-common/audio/dsp_filters/eq.c"
+#include "../libretro-common/audio/dsp_filters/chorus.c"
+#include "../libretro-common/audio/dsp_filters/iir.c"
+#include "../libretro-common/audio/dsp_filters/panning.c"
+#include "../libretro-common/audio/dsp_filters/phaser.c"
+#include "../libretro-common/audio/dsp_filters/reverb.c"
+#include "../libretro-common/audio/dsp_filters/wahwah.c"
 #endif
+
 /*============================================================
 DYNAMIC
 ============================================================ */
 #include "../libretro-common/dynamic/dylib.c"
 #include "../dynamic.c"
 #include "../gfx/video_filter.c"
-#include "../audio/audio_dsp_filter.c"
+#include "../libretro-common/audio/dsp_filter.c"
 
 /*============================================================
 CORES
@@ -949,6 +946,7 @@ MENU
 #include "../menu/widgets/menu_input_dialog.c"
 #include "../menu/widgets/menu_input_bind_dialog.c"
 #include "../menu/widgets/menu_list.c"
+#include "../menu/widgets/menu_osk.c"
 #include "../menu/cbs/menu_cbs_ok.c"
 #include "../menu/cbs/menu_cbs_cancel.c"
 #include "../menu/cbs/menu_cbs_select.c"
@@ -1038,6 +1036,10 @@ MENU
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#if defined(HAVE_NETWORKING)
+#include "../libretro-common/net/net_http_parse.c"
 #endif
 
 /*============================================================

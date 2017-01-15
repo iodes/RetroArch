@@ -763,7 +763,6 @@ static void check_proc_acpi_sysfs_battery(const char *node,
       bool *have_battery, bool *charging,
       int *seconds, int *percent)
 {
-   unsigned capacity;
    char path[1024];
    const char *base  = proc_acpi_sysfs_battery_path;
    char        *buf  = NULL;
@@ -772,27 +771,37 @@ static void check_proc_acpi_sysfs_battery(const char *node,
    char         *val = NULL;
    bool       charge = false;
    bool       choose = false;
+   unsigned capacity = 0;
    ssize_t length    = 0;
    int       maximum = -1;
    int     remaining = -1;
    int          secs = -1;
    int           pct = -1;
 
-   if (!strstr(node, "BAT"))
-      return;
-
    path[0]           = '\0';
 
    snprintf(path, sizeof(path), "%s/%s/%s", base, node, "status");
+
    if (!path_file_exists(path))
       return;
    if (filestream_read_file(path, (void**)&buf, &length) != 1)
       return;
 
-   if (strstr((char*)buf, "Discharging"))
-      *have_battery = true;
-   else if (strstr((char*)buf, "Full"))
-      *have_battery = true;
+   if (buf)
+   {
+      if (strstr((char*)buf, "Discharging"))
+         *have_battery = true;
+      else if (strstr((char*)buf, "Charging"))
+      {
+         *have_battery = true;
+         *charging = true;
+      }
+      else if (strstr((char*)buf, "Full"))
+         *have_battery = true;
+      free(buf);
+   }
+
+   buf = NULL;
 
    snprintf(path, sizeof(path), "%s/%s/%s", base, node, "capacity");
    if (filestream_read_file(path, (void**)&buf, &length) != 1)
@@ -803,8 +812,7 @@ static void check_proc_acpi_sysfs_battery(const char *node,
    *percent = capacity;
 
 end:
-   if (buf)
-      free(buf);
+   free(buf);
    buf = NULL;
 }
 
@@ -983,20 +991,18 @@ static bool frontend_linux_powerstate_check_acpi(
       enum frontend_powerstate *state,
       int *seconds, int *percent)
 {
-   bool ret            = false;
-   struct RDIR *entry  = NULL;
    bool have_battery   = false;
    bool have_ac        = false;
    bool charging       = false;
-
-   *state = FRONTEND_POWERSTATE_NONE;
-
-   entry = retro_opendir(proc_acpi_battery_path);
+   struct RDIR *entry  = retro_opendir(proc_acpi_battery_path);
    if (!entry)
-      goto end;
+      return false;
 
    if (retro_dirent_error(entry))
-      goto end;
+   {
+      retro_closedir(entry);
+      return false;
+   }
 
    while (retro_readdir(entry))
       check_proc_acpi_battery(retro_dirent_get_name(entry),
@@ -1006,11 +1012,13 @@ static bool frontend_linux_powerstate_check_acpi(
 
    entry = retro_opendir(proc_acpi_ac_adapter_path);
    if (!entry)
-      goto end;
+      return false;
 
    while (retro_readdir(entry))
       check_proc_acpi_ac_adapter(
             retro_dirent_get_name(entry), &have_ac);
+
+   retro_closedir(entry);
 
    if (!have_battery)
       *state = FRONTEND_POWERSTATE_NO_SOURCE;
@@ -1021,28 +1029,17 @@ static bool frontend_linux_powerstate_check_acpi(
    else
       *state = FRONTEND_POWERSTATE_ON_POWER_SOURCE;
 
-   ret = true;
-
-end:
-   if (entry)
-      retro_closedir(entry);
-
-   return ret;
+   return true;
 }
 
 static bool frontend_linux_powerstate_check_acpi_sysfs(
       enum frontend_powerstate *state,
       int *seconds, int *percent)
 {
-   bool ret            = false;
-   struct RDIR *entry  = NULL;
    bool have_battery   = false;
    bool have_ac        = false;
    bool charging       = false;
-
-   *state = FRONTEND_POWERSTATE_NONE;
-
-   entry = retro_opendir(proc_acpi_sysfs_battery_path);
+   struct RDIR *entry  = retro_opendir(proc_acpi_sysfs_battery_path);
    if (!entry)
       goto error;
 
@@ -1050,8 +1047,13 @@ static bool frontend_linux_powerstate_check_acpi_sysfs(
       goto error;
 
    while (retro_readdir(entry))
-      check_proc_acpi_sysfs_battery(retro_dirent_get_name(entry),
-            &have_battery, &charging, seconds, percent);
+   {
+      const char *node = retro_dirent_get_name(entry);
+
+      if (node && strstr(node, "BAT"))
+         check_proc_acpi_sysfs_battery(node,
+               &have_battery, &charging, seconds, percent);
+   }
 
    retro_closedir(entry);
 
@@ -1110,6 +1112,8 @@ static enum frontend_powerstate frontend_linux_get_powerstate(
 #ifndef ANDROID
    if (frontend_linux_powerstate_check_acpi_sysfs(&ret, seconds, percent))
       return ret;
+
+   ret = FRONTEND_POWERSTATE_NONE;
 
    if (frontend_linux_powerstate_check_acpi(&ret, seconds, percent))
       return ret;
@@ -1474,8 +1478,6 @@ static void frontend_linux_get_env(int *argc,
             "RetroArch", "[ENV]: application location: [%s]\n", app_dir);
          if (args && *app_dir)
          {
-            char buf[PATH_MAX_LENGTH] = {0};
-
             fill_pathname_join(g_defaults.dir.assets, app_dir,
                   "assets", sizeof(g_defaults.dir.assets));
             fill_pathname_join(g_defaults.dir.cache, app_dir,

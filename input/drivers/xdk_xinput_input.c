@@ -28,8 +28,8 @@
 #include <boolean.h>
 #include <libretro.h>
 
+#include "../input_driver.h"
 #include "../input_joypad_driver.h"
-#include "../../configuration.h"
 
 #define MAX_PADS 4
 
@@ -47,11 +47,13 @@ static void xdk_input_poll(void *data)
       xdk->joypad->poll();
 }
 
-static int16_t xdk_input_state(void *data, const struct retro_keybind **binds,
+static int16_t xdk_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device,
       unsigned index, unsigned id)
 {
-   xdk_input_t *xdk = (xdk_input_t*)data;
+   xdk_input_t *xdk           = (xdk_input_t*)data;
 
    if (port >= MAX_PADS)
       return 0;
@@ -59,12 +61,10 @@ static int16_t xdk_input_state(void *data, const struct retro_keybind **binds,
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return input_joypad_pressed(xdk->joypad, port, binds[port], id);
-         break;
+         return input_joypad_pressed(xdk->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
-            return input_joypad_analog(xdk->joypad, port, index, id, binds[port]);
+            return input_joypad_analog(xdk->joypad, joypad_info, port, index, id, binds[port]);
          break;
    }
 
@@ -84,14 +84,13 @@ static void xdk_input_free_input(void *data)
    free(xdk);
 }
 
-static void *xdk_input_init(void)
+static void *xdk_input_init(const char *joypad_driver)
 {
-   settings_t *settings = config_get_ptr();
    xdk_input_t *xdk     = (xdk_input_t*)calloc(1, sizeof(*xdk));
    if (!xdk)
       return NULL;
 
-   xdk->joypad = input_joypad_init_driver(settings->input.joypad_driver, xdk);
+   xdk->joypad = input_joypad_init_driver(joypad_driver, xdk);
 
    return xdk;
 }

@@ -23,8 +23,6 @@
 
 #include "../../tasks/tasks_internal.h"
 
-#include "../../configuration.h"
-#include "../../configuration.h"
 #include "../../retroarch.h"
 #include "../../command.h"
 #include "string.h"
@@ -45,18 +43,15 @@ static const char *ctr_joypad_name(unsigned pad)
 
 static void ctr_joypad_autodetect_add(unsigned autoconf_pad)
 {
-   autoconfig_params_t params;
-
-   /* TODO - implement VID/PID? */
-   params.idx             = autoconf_pad;
-   params.vid             = 0;
-   params.pid             = 0;
-   params.display_name[0] = '\0';
-
-   strlcpy(params.name, ctr_joypad_name(autoconf_pad), sizeof(params.name));
-   strlcpy(params.driver, ctr_joypad.ident, sizeof(params.driver));
-
-   input_autoconfigure_connect(&params);
+   if (!input_autoconfigure_connect(
+         ctr_joypad_name(autoconf_pad),
+         NULL,
+         ctr_joypad.ident,
+         autoconf_pad,
+         0,
+         0
+         ))
+      input_config_set_device_name(autoconf_pad, ctr_joypad_name(autoconf_pad));
 }
 
 static bool ctr_joypad_init(void *data)

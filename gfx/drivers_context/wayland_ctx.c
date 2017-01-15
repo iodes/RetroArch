@@ -511,10 +511,10 @@ static void registry_handle_global(void *data, struct wl_registry *reg,
       wl->shell = (struct wl_shell*)
          wl_registry_bind(reg, id, &wl_shell_interface, 1);
    else if (string_is_equal(interface, "wl_shm"))
-      wl->shm = wl_registry_bind(reg, id, &wl_shm_interface, 1);
+      wl->shm = (struct wl_shm*)wl_registry_bind(reg, id, &wl_shm_interface, 1);
    else if (string_is_equal(interface, "wl_seat"))
    {
-      wl->seat = wl_registry_bind(reg, id, &wl_seat_interface, 4);
+      wl->seat = (struct wl_seat*)wl_registry_bind(reg, id, &wl_seat_interface, 4);
       wl_seat_add_listener(wl->seat, &seat_listener, wl);
    }
 }
@@ -720,20 +720,19 @@ static bool gfx_ctx_wl_set_resize(void *data, unsigned width, unsigned height)
    return true;
 }
 
-static void gfx_ctx_wl_update_window_title(void *data)
+static void gfx_ctx_wl_update_window_title(void *data, video_frame_info_t video_info)
 {
    char buf[128];
    char buf_fps[128];
-   settings_t *settings       = config_get_ptr();
    gfx_ctx_wayland_data_t *wl = (gfx_ctx_wayland_data_t*)data;
 
    buf[0] = buf_fps[0] = '\0';
 
-   if (video_monitor_get_fps(buf, sizeof(buf),  
+   if (video_monitor_get_fps(video_info, buf, sizeof(buf),  
             buf_fps, sizeof(buf_fps)))
       wl_shell_surface_set_title(wl->shell_surf, buf);
 
-   if (settings->fps_show)
+   if (video_info.fps_show)
       runloop_msg_queue_push(buf_fps, 1, 1, false);
 }
 
@@ -781,7 +780,7 @@ static bool gfx_ctx_wl_get_metrics(void *data,
    EGL_DEPTH_SIZE,      0
 #endif
 
-static void *gfx_ctx_wl_init(void *video_driver)
+static void *gfx_ctx_wl_init(video_frame_info_t video_info, void *video_driver)
 {
 #ifdef HAVE_OPENGL
    static const EGLint egl_attribs_gl[] = {
@@ -1077,6 +1076,7 @@ static void gfx_ctx_wl_set_swap_interval(void *data, unsigned swap_interval)
 }
 
 static bool gfx_ctx_wl_set_video_mode(void *data,
+      video_frame_info_t video_info,
       unsigned width, unsigned height,
       bool fullscreen)
 {
@@ -1087,10 +1087,11 @@ static bool gfx_ctx_wl_set_video_mode(void *data,
 #endif
    gfx_ctx_wayland_data_t *wl = (gfx_ctx_wayland_data_t*)data;
 
-   wl->width        = width  ? width  : DEFAULT_WINDOWED_WIDTH;
-   wl->height       = height ? height : DEFAULT_WINDOWED_HEIGHT;
+   wl->width                  = width  ? width  : DEFAULT_WINDOWED_WIDTH;
+   wl->height                 = height ? height : DEFAULT_WINDOWED_HEIGHT;
 
-   wl->surface    = wl_compositor_create_surface(wl->compositor);
+   wl->surface                = wl_compositor_create_surface(wl->compositor);
+
    wl_surface_set_buffer_scale(wl->surface, wl->buffer_scale);
 
    switch (wl_api)
@@ -1312,7 +1313,9 @@ static int16_t input_wl_pointer_state(gfx_ctx_wayland_data_t *wl,
 }
 
 
-static int16_t input_wl_state(void *data, const struct retro_keybind **binds,
+static int16_t input_wl_state(void *data,
+      rarch_joypad_info_t joypad_info,
+      const struct retro_keybind **binds,
       unsigned port, unsigned device, unsigned idx, unsigned id)
 {
    int16_t ret;
@@ -1326,12 +1329,12 @@ static int16_t input_wl_state(void *data, const struct retro_keybind **binds,
       case RETRO_DEVICE_JOYPAD:
          if (binds[port] && binds[port][id].valid)
             return input_wl_is_pressed(wl, binds[port], id) ||
-               input_joypad_pressed(wl->joypad, port, binds[port], id);
+               input_joypad_pressed(wl->joypad, joypad_info, port, binds[port], id);
          break;
       case RETRO_DEVICE_ANALOG:
          ret = input_wl_analog_pressed(wl, binds[port], idx, id);
          if (!ret && binds[port])
-            ret = input_joypad_analog(wl->joypad, port, idx, id, binds[port]);
+            ret = input_joypad_analog(wl->joypad, joypad_info, port, idx, id, binds[port]);
          return ret;
 
       case RETRO_DEVICE_KEYBOARD:
@@ -1549,7 +1552,7 @@ static void *gfx_ctx_wl_get_context_data(void *data)
 }
 #endif
 
-static void gfx_ctx_wl_swap_buffers(void *data)
+static void gfx_ctx_wl_swap_buffers(void *data, video_frame_info_t video_info)
 {
    gfx_ctx_wayland_data_t *wl = (gfx_ctx_wayland_data_t*)data;
 

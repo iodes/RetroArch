@@ -29,7 +29,6 @@
 #include "../../gfx/video_driver.h"
 #include "../common/input_x11_common.h"
 
-#include "../../configuration.h"
 #include "../../verbosity.h"
 
 typedef struct x11_input
@@ -49,10 +48,9 @@ typedef struct x11_input
 } x11_input_t;
 
 
-static void *x_input_init(void)
+static void *x_input_init(const char *joypad_driver)
 {
    x11_input_t *x11;
-   settings_t *settings = config_get_ptr();
 
    if (video_driver_display_type_get() != RARCH_DISPLAY_X11)
    {
@@ -68,7 +66,7 @@ static void *x_input_init(void)
    x11->display = (Display*)video_driver_display_get();
    x11->win     = (Window)video_driver_window_get();
 
-   x11->joypad = input_joypad_init_driver(settings->input.joypad_driver, x11);
+   x11->joypad  = input_joypad_init_driver(joypad_driver, x11);
    input_keymaps_init_keyboard_lut(rarch_key_map_x11);
 
    return x11;
@@ -220,26 +218,26 @@ static int16_t x_lightgun_state(x11_input_t *x11, unsigned id)
 }
 
 static int16_t x_input_state(void *data,
+      rarch_joypad_info_t joypad_info,
       const struct retro_keybind **binds, unsigned port,
       unsigned device, unsigned idx, unsigned id)
 {
-   int16_t ret      = 0;
-   x11_input_t *x11 = (x11_input_t*)data;
+   int16_t ret                = 0;
+   x11_input_t *x11           = (x11_input_t*)data;
 
    switch (device)
    {
       case RETRO_DEVICE_JOYPAD:
-         if (binds[port] && binds[port][id].valid)
-            return x_is_pressed(x11, binds[port], id) ||
-               input_joypad_pressed(x11->joypad, port, binds[port], id);
-         break;
+         return x_is_pressed(x11, binds[port], id) ||
+            input_joypad_pressed(x11->joypad, joypad_info, port, binds[port], id);
       case RETRO_DEVICE_KEYBOARD:
          return x_key_pressed(x11, id);
       case RETRO_DEVICE_ANALOG:
          if (binds[port])
             ret = x_pressed_analog(x11, binds[port], idx, id);
-         if (!ret && binds[port] && binds[port])
-            ret = input_joypad_analog(x11->joypad, port, idx,
+         if (!ret && binds[port])
+            ret = input_joypad_analog(x11->joypad, joypad_info,
+                  port, idx,
                   id, binds[port]);
          return ret;
 

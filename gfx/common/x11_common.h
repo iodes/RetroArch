@@ -33,6 +33,7 @@
 
 #include <boolean.h>
 
+#include "../video_driver.h"
 #include "../video_context_driver.h"
 
 extern Window   g_x11_win;
@@ -44,7 +45,8 @@ void x11_save_last_used_monitor(Window win);
 void x11_show_mouse(Display *dpy, Window win, bool state);
 void x11_windowed_fullscreen(Display *dpy, Window win);
 void x11_suspend_screensaver(Window win, bool enable);
-bool x11_enter_fullscreen(Display *dpy, unsigned width,
+bool x11_enter_fullscreen(video_frame_info_t video_info,
+      Display *dpy, unsigned width,
       unsigned height, XF86VidModeModeInfo *desktop_mode);
 
 void x11_exit_fullscreen(Display *dpy, XF86VidModeModeInfo *desktop_mode);
@@ -82,7 +84,7 @@ bool x11_alive(void *data);
 
 bool x11_connect(void);
 
-void x11_update_window_title(void *data);
+void x11_update_window_title(void *data, video_frame_info_t video_info);
 
 bool x11_input_ctx_new(bool true_full);
 

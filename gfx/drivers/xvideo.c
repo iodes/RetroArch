@@ -412,6 +412,7 @@ static void *xv_init(const video_info_t *video,
 {
    unsigned i;
    XWindowAttributes target;
+   video_frame_info_t video_info;
    char buf[128]                          = {0};
    XSetWindowAttributes attributes        = {0};
    XVisualInfo visualtemplate             = {0};
@@ -527,7 +528,9 @@ static void *xv_init(const video_info_t *video,
 
    XMapWindow(g_x11_dpy, g_x11_win);
 
-   if (video_monitor_get_fps(buf, sizeof(buf), NULL, 0))
+   video_driver_build_info(&video_info);
+
+   if (video_monitor_get_fps(video_info, buf, sizeof(buf), NULL, 0))
       XStoreName(g_x11_dpy, g_x11_win, buf);
 
    x11_set_window_attr(g_x11_dpy, g_x11_win);
@@ -582,7 +585,7 @@ static void *xv_init(const video_info_t *video,
 
    if (input && input_data)
    {
-      xinput = input_x.init();
+      xinput = input_x.init(settings->input.joypad_driver);
       if (xinput)
       {
          *input = &input_x;
@@ -781,7 +784,7 @@ static void xv_render_msg(xv_t *xv, const char *msg,
 
 static bool xv_frame(void *data, const void *frame, unsigned width,
       unsigned height, uint64_t frame_count,
-      unsigned pitch, const char *msg)
+      unsigned pitch, const char *msg, video_frame_info_t video_info)
 {
    XWindowAttributes target;
    xv_t *xv                  = (xv_t*)data;
@@ -808,7 +811,7 @@ static bool xv_frame(void *data, const void *frame, unsigned width,
          true);
    XSync(g_x11_dpy, False);
 
-   x11_update_window_title(NULL);
+   x11_update_window_title(NULL, video_info);
 
    return true;
 }
